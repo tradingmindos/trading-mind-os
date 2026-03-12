@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
 
 // ─── DATI ───────────────────────────────────────────────────────────────────
 const EMOTIONS = ["😤 FOMO", "😰 Paura", "🧠 Lucido", "😤 Vendetta", "😴 Stanco", "💪 Fiducioso", "😬 Ansioso", "🎯 In Zona"];
@@ -9,13 +10,6 @@ const PLANS = {
   mid:   { name: "MID",   color: "#00ff88", monthly: 27,  annual: 227,  trades: 999, badge: null,        features: ["Trade illimitati", "Analisi psicologica avanzata", "Statistiche avanzate", "Report macro mensile"] },
   pro:   { name: "PRO",   color: "#ff9900", monthly: 97,  annual: 797,  trades: 999, badge: "ESCLUSIVO", features: ["Tutto del Mid", "Report macro premium illimitati", "Accesso anticipato nuove feature", "Coaching umano 1:1 personalizzato", "Max 20 posti disponibili"] },
 };
-
-const initialTrades = [
-  { id: 1, date: "2025-03-08", symbol: "EUR/USD", direction: "LONG", entry: 1.0842, exit: 1.0891, size: 1.5, pnl: 73.5, emotionBefore: "🧠 Lucido", emotionDuring: "💪 Fiducioso", emotionAfter: "🎯 In Zona", notes: "Setup perfetto, rispettato il piano.", setup: "Breakout + Retest" },
-  { id: 2, date: "2025-03-09", symbol: "GOLD", direction: "SHORT", entry: 2185, exit: 2201, size: 0.5, pnl: -80, emotionBefore: "😤 FOMO", emotionDuring: "😬 Ansioso", emotionAfter: "😰 Paura", notes: "Entrato troppo in fretta senza conferma.", setup: "Impulso senza setup" },
-  { id: 3, date: "2025-03-10", symbol: "BTC/USD", direction: "LONG", entry: 81200, exit: 82900, size: 0.1, pnl: 170, emotionBefore: "🧠 Lucido", emotionDuring: "🧠 Lucido", emotionAfter: "💪 Fiducioso", notes: "Aspettato il livello chiave. Pazienza premiata.", setup: "Demand Zone" },
-  { id: 4, date: "2025-03-11", symbol: "NAS100", direction: "SHORT", entry: 19850, exit: 19780, size: 0.2, pnl: 140, emotionBefore: "🎯 In Zona", emotionDuring: "🎯 In Zona", emotionAfter: "💪 Fiducioso", notes: "Esecuzione pulita. Nessuna deviazione dal piano.", setup: "Supply Zone + FVG" },
-];
 
 const CHART_DATA = [
   { d: "Mar 1", pnl: 120 }, { d: "Mar 2", pnl: -45 }, { d: "Mar 3", pnl: 210 },
@@ -75,6 +69,8 @@ const CSS = `
   .fade-in { animation: fadeIn 0.4s ease; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
   .pulse { animation: pulse 2s infinite; }
+  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .spin { animation: spin 1s linear infinite; }
 `;
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
@@ -86,15 +82,31 @@ function LoginPage({ onLogin, onGoToPricing }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
     if (!email || !password) { setError("Inserisci email e password."); return; }
     if (mode === "register" && !name) { setError("Inserisci il tuo nome."); return; }
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      if (mode === "register") {
+        const { data, error } = await supabase.auth.signUp({
+          email, password,
+          options: { data: { name, plan: "free" } }
+        });
+        if (error) throw error;
+        onLogin({ name, email, plan: "free", id: data.user?.id });
+      } else {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        const userData = data.user?.user_metadata;
+        onLogin({ name: userData?.name || email.split("@")[0], email, plan: userData?.plan || "free", id: data.user?.id });
+      }
+    } catch (err) {
+      setError(err.message === "Invalid login credentials" ? "Email o password errati." : err.message);
+    } finally {
       setLoading(false);
-      onLogin({ name: name || email.split("@")[0], email, plan: "free" });
-    }, 1200);
+    }
   };
 
   return (
@@ -118,7 +130,7 @@ function LoginPage({ onLogin, onGoToPricing }) {
           )}
           <div><label className="label">Email</label><input className="input" type="email" placeholder="tua@email.com" value={email} onChange={e=>setEmail(e.target.value)} /></div>
           <div><label className="label">Password</label><input className="input" type="password" placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} /></div>
-          {error && <div style={{ fontSize:11, color:"#ff4466", letterSpacing:1 }}>{error}</div>}
+          {error && <div style={{ fontSize:11, color:"#ff4466", letterSpacing:1, lineHeight:1.5 }}>{error}</div>}
           <button className="btn-solid" onClick={handleSubmit} style={{ marginTop:8, width:"100%", padding:12, fontSize:12 }} disabled={loading}>
             {loading ? <span className="pulse">CARICAMENTO...</span> : mode==="login" ? "ACCEDI →" : "CREA ACCOUNT →"}
           </button>
@@ -159,7 +171,7 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
             const price = billing==="monthly" ? plan.monthly : plan.annual;
             const isCurrent = currentPlan===key;
             return (
-              <div key={key} className="plan-card" style={{ borderColor: isCurrent ? plan.color+"88" : key==="beta" ? "#00ff8833" : "#1a2332", boxShadow: key==="beta" ? "0 0 40px #00ff8808" : "none" }}>
+              <div key={key} className="plan-card" style={{ borderColor: isCurrent ? plan.color+"88" : key==="beta" ? "#00ff8833" : "#1a2332" }}>
                 {plan.badge && <div style={{ position:"absolute", top:-1, right:16, background:plan.color, color:"#060a0f", fontSize:9, letterSpacing:2, padding:"3px 10px", fontWeight:700 }}>{plan.badge}</div>}
                 {isCurrent && <div style={{ position:"absolute", top:-1, left:16, background:"#1a2332", color:"#556068", fontSize:9, letterSpacing:2, padding:"3px 10px" }}>ATTIVO</div>}
                 <div style={{ marginBottom:20 }}>
@@ -191,8 +203,8 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
         <div className="card" style={{ padding:24, textAlign:"center", borderColor:"#ff990022", marginBottom:32 }}>
           <div style={{ fontSize:11, color:"#ff9900", letterSpacing:2, marginBottom:8 }}>⚠ PIANO PRO — POSTI LIMITATI</div>
           <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8 }}>
-            Il piano PRO include coaching umano personalizzato 1:1. Per mantenere la qualità,<br/>
-            i posti sono <strong style={{ color:"#ff9900" }}>limitati a 20 persone</strong>.
+            Il piano PRO include coaching umano personalizzato 1:1.<br/>
+            I posti sono <strong style={{ color:"#ff9900" }}>limitati a 20 persone</strong>.
           </div>
         </div>
 
@@ -201,12 +213,12 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
           <div className="grid-2" style={{ gap:16 }}>
             {[
               { q:"Posso cambiare piano in qualsiasi momento?", a:"Sì, puoi fare upgrade o downgrade quando vuoi. Il cambio è immediato." },
-              { q:"Come funziona il coaching PRO?", a:"Sessioni 1:1 con Nicolo via videocall. L'obiettivo è lavorare sulla tua psicologia specifica." },
+              { q:"Come funziona il coaching PRO?", a:"Sessioni 1:1 con Nicolo via videocall. Lavoriamo sulla tua psicologia specifica." },
               { q:"I report macro sono inclusi nel piano MID?", a:"Il piano MID include 1 report mensile. Il PRO include tutti i report senza limiti." },
-              { q:"Posso cancellare quando voglio?", a:"Sì, nessun vincolo. Puoi cancellare l'abbonamento in qualsiasi momento dal tuo profilo." },
+              { q:"Posso cancellare quando voglio?", a:"Sì, nessun vincolo. Puoi cancellare l'abbonamento in qualsiasi momento." },
             ].map((faq,i) => (
               <div key={i} className="card" style={{ padding:20 }}>
-                <div style={{ fontSize:12, color:"#00ff88", marginBottom:8, letterSpacing:1 }}>{faq.q}</div>
+                <div style={{ fontSize:12, color:"#00ff88", marginBottom:8 }}>{faq.q}</div>
                 <div style={{ fontSize:11, color:"#556068", lineHeight:1.7 }}>{faq.a}</div>
               </div>
             ))}
@@ -219,47 +231,102 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
 
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 export default function TradingMindOS() {
-  const [screen, setScreen] = useState("login");
+  const [screen, setScreen] = useState("loading");
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [trades, setTrades] = useState(initialTrades);
+  const [trades, setTrades] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [time, setTime] = useState(new Date());
-  const [newTrade, setNewTrade] = useState({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotionBefore:"🧠 Lucido", emotionDuring:"🧠 Lucido", emotionAfter:"🧠 Lucido", notes:"", setup:"" });
+  const [newTrade, setNewTrade] = useState({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotion_before:"🧠 Lucido", emotion_during:"🧠 Lucido", emotion_after:"🧠 Lucido", notes:"", setup:"" });
 
-  useEffect(() => { const t = setInterval(()=>setTime(new Date()),1000); return ()=>clearInterval(t); }, []);
+  useEffect(() => {
+    const t = setInterval(()=>setTime(new Date()),1000);
+    return ()=>clearInterval(t);
+  }, []);
 
-  const handleLogin = (userData) => { setUser(userData); setScreen("app"); };
+  // Controlla se utente già loggato
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const meta = session.user.user_metadata;
+        setUser({ name: meta?.name || session.user.email.split("@")[0], email: session.user.email, plan: meta?.plan || "free", id: session.user.id });
+        loadTrades(session.user.id);
+        setScreen("app");
+      } else {
+        setScreen("login");
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setUser(null); setScreen("login"); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadTrades = async (userId) => {
+    const { data } = await supabase.from("trades").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    if (data) setTrades(data);
+  };
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    loadTrades(userData.id);
+    setScreen("app");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setTrades([]);
+    setScreen("login");
+  };
+
   const handleSelectPlan = (planKey) => {
-    if (planKey==="free") { setUser(u=>({...u,plan:"free"})); setScreen("app"); return; }
-    alert(`Reindirizzamento a Stripe per il piano ${planKey.toUpperCase()}...\n(Integrazione Stripe da configurare nel prossimo step)`);
+    if (planKey==="free") { setScreen("app"); return; }
+    alert(`Reindirizzamento a Stripe per il piano ${planKey.toUpperCase()}...\n(Integrazione Stripe in arrivo!)`);
   };
 
   const plan = PLANS[user?.plan||"free"];
   const tradeLimit = plan?.trades||10;
   const canAddTrade = trades.length < tradeLimit;
 
-  const totalPnL = trades.reduce((s,t)=>s+t.pnl,0);
-  const winTrades = trades.filter(t=>t.pnl>0);
+  const totalPnL = trades.reduce((s,t)=>s+(t.pnl||0),0);
+  const winTrades = trades.filter(t=>(t.pnl||0)>0);
   const winRate = trades.length ? Math.round((winTrades.length/trades.length)*100) : 0;
-  const avgWin = winTrades.length ? Math.round(winTrades.reduce((s,t)=>s+t.pnl,0)/winTrades.length) : 0;
-  const lossTrades = trades.filter(t=>t.pnl<0);
-  const avgLoss = lossTrades.length ? Math.round(Math.abs(lossTrades.reduce((s,t)=>s+t.pnl,0))/lossTrades.length) : 0;
+  const avgWin = winTrades.length ? Math.round(winTrades.reduce((s,t)=>s+(t.pnl||0),0)/winTrades.length) : 0;
+  const lossTrades = trades.filter(t=>(t.pnl||0)<0);
+  const avgLoss = lossTrades.length ? Math.round(Math.abs(lossTrades.reduce((s,t)=>s+(t.pnl||0),0))/lossTrades.length) : 0;
   const rr = avgLoss ? (avgWin/avgLoss).toFixed(2) : "∞";
 
   const cumPnL = []; let running=0;
   CHART_DATA.forEach(d=>{ running+=d.pnl; cumPnL.push({...d,cum:running}); });
   const maxCum=Math.max(...cumPnL.map(d=>d.cum)), minCum=Math.min(...cumPnL.map(d=>d.cum)), range=maxCum-minCum||1;
 
-  const handleAddTrade = () => {
+  const handleAddTrade = async () => {
     if (!canAddTrade) { setShowUpgrade(true); return; }
-    const t = {...newTrade, id:Date.now(), entry:+newTrade.entry, exit:+newTrade.exit, size:+newTrade.size};
-    t.pnl = Math.round((t.exit-t.entry)*t.size*(t.direction==="LONG"?1:-1)*100)/100;
-    setTrades([...trades,t]);
-    setShowModal(false);
-    setNewTrade({date:new Date().toISOString().split("T")[0],symbol:"",direction:"LONG",entry:"",exit:"",size:"",emotionBefore:"🧠 Lucido",emotionDuring:"🧠 Lucido",emotionAfter:"🧠 Lucido",notes:"",setup:""});
+    const entry = +newTrade.entry, exit = +newTrade.exit, size = +newTrade.size;
+    const pnl = Math.round((exit-entry)*size*(newTrade.direction==="LONG"?1:-1)*100)/100;
+    const trade = { ...newTrade, entry, exit, size, pnl, user_id: user.id };
+
+    const { data, error } = await supabase.from("trades").insert([trade]).select();
+    if (!error && data) {
+      setTrades([data[0], ...trades]);
+      setShowModal(false);
+      setNewTrade({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotion_before:"🧠 Lucido", emotion_during:"🧠 Lucido", emotion_after:"🧠 Lucido", notes:"", setup:"" });
+    }
   };
+
+  // Loading screen
+  if (screen==="loading") return (
+    <div style={{ minHeight:"100vh", background:"#060a0f", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'IBM Plex Mono',monospace" }}>
+      <style>{CSS}</style>
+      <div style={{ textAlign:"center" }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:36, letterSpacing:6, color:"#00ff88", marginBottom:16 }} className="glow">TRADING MIND OS</div>
+        <div style={{ fontSize:11, color:"#556068", letterSpacing:2 }} className="pulse">CARICAMENTO...</div>
+      </div>
+    </div>
+  );
 
   if (screen==="login") return <LoginPage onLogin={handleLogin} onGoToPricing={()=>setScreen("pricing")} />;
   if (screen==="pricing") return <PricingPage onBack={()=>setScreen(user?"app":"login")} onSelectPlan={handleSelectPlan} currentPlan={user?.plan||"free"} />;
@@ -290,7 +357,7 @@ export default function TradingMindOS() {
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <span style={{ fontSize:11, color:"#8b949e" }}>Ciao, <span style={{ color:"#00ff88" }}>{user?.name}</span></span>
             <button className="btn-primary" style={{ fontSize:9, padding:"4px 10px", borderColor:plan.color, color:plan.color }} onClick={()=>setScreen("pricing")}>UPGRADE</button>
-            <button onClick={()=>{setUser(null);setScreen("login");}} style={{ background:"none", border:"none", color:"#556068", cursor:"pointer", fontSize:10 }}>ESCI</button>
+            <button onClick={handleLogout} style={{ background:"none", border:"none", color:"#556068", cursor:"pointer", fontSize:10 }}>ESCI</button>
           </div>
         </div>
       </header>
@@ -308,12 +375,12 @@ export default function TradingMindOS() {
         </div>
       </div>
 
-      {/* Trade limit bar (solo free) */}
+      {/* Trade limit bar */}
       {user?.plan==="free" && (
         <div style={{ background:"#080d12", borderBottom:"1px solid #0f1923", padding:"6px 24px", display:"flex", alignItems:"center", gap:12 }}>
           <span style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>TRADE USATI:</span>
           <div style={{ flex:1, maxWidth:200, height:4, background:"#1a2332", borderRadius:2 }}>
-            <div style={{ height:"100%", width:`${(trades.length/tradeLimit)*100}%`, background:trades.length>=tradeLimit?"#ff4466":"#00ff88", borderRadius:2, transition:"width 0.3s" }} />
+            <div style={{ height:"100%", width:`${Math.min((trades.length/tradeLimit)*100,100)}%`, background:trades.length>=tradeLimit?"#ff4466":"#00ff88", borderRadius:2 }} />
           </div>
           <span style={{ fontSize:10, color:trades.length>=tradeLimit?"#ff4466":"#556068" }}>{trades.length}/{tradeLimit}</span>
           {trades.length>=tradeLimit && <button className="btn-primary" style={{ fontSize:9, padding:"3px 10px" }} onClick={()=>setScreen("pricing")}>UPGRADE →</button>}
@@ -343,7 +410,7 @@ export default function TradingMindOS() {
               ].map(k=>(
                 <div key={k.label} className="stat-card">
                   <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>{k.label}</div>
-                  <div style={{ fontSize:28, fontWeight:600, color:k.up?"#00ff88":"#ff4466", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3 }}>{k.value}</div>
+                  <div style={{ fontSize:28, color:k.up?"#00ff88":"#ff4466", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:3 }}>{k.value}</div>
                   <div style={{ fontSize:10, color:"#556068", marginTop:4 }}>{k.sub}</div>
                 </div>
               ))}
@@ -351,7 +418,7 @@ export default function TradingMindOS() {
 
             <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16 }}>
               <div className="card" style={{ padding:20 }}>
-                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Equity Curve — Marzo 2025</div>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Equity Curve</div>
                 <svg viewBox="0 0 460 120" style={{ width:"100%", height:120 }}>
                   <defs><linearGradient id="grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#00ff88" stopOpacity="0.15"/><stop offset="100%" stopColor="#00ff88" stopOpacity="0"/></linearGradient></defs>
                   {[0,30,60,90,120].map(y=><line key={y} x1="0" y1={y} x2="460" y2={y} stroke="#1a2332" strokeWidth="0.5"/>)}
@@ -377,26 +444,34 @@ export default function TradingMindOS() {
               </div>
             </div>
 
-            <div className="card" style={{ padding:20 }}>
-              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◫ Ultimi Trade</div>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                <thead><tr style={{ borderBottom:"1px solid #1a2332" }}>{["DATA","SIMBOLO","DIR","ENTRY","EXIT","P&L","STATO MENTALE","SETUP"].map(h=><th key={h} style={{ textAlign:"left", padding:"6px 8px", fontSize:9, color:"#556068", letterSpacing:1, fontWeight:400 }}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {trades.slice(-5).reverse().map(t=>(
-                    <tr key={t.id} className="trade-row">
-                      <td style={{ padding:"10px 8px", color:"#556068", fontSize:11 }}>{t.date}</td>
-                      <td style={{ padding:"10px 8px", fontWeight:600 }}>{t.symbol}</td>
-                      <td style={{ padding:"10px 8px", color:t.direction==="LONG"?"#00ff88":"#ff4466", fontSize:10 }}>{t.direction}</td>
-                      <td style={{ padding:"10px 8px", color:"#8b949e" }}>{t.entry}</td>
-                      <td style={{ padding:"10px 8px", color:"#8b949e" }}>{t.exit}</td>
-                      <td style={{ padding:"10px 8px", color:t.pnl>=0?"#00ff88":"#ff4466", fontWeight:600 }}>{t.pnl>=0?"+":""}{t.pnl}$</td>
-                      <td style={{ padding:"10px 8px", fontSize:11 }}>{t.emotionBefore}</td>
-                      <td style={{ padding:"10px 8px" }}><span className="tag">{t.setup}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {trades.length > 0 ? (
+              <div className="card" style={{ padding:20 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◫ Ultimi Trade</div>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                  <thead><tr style={{ borderBottom:"1px solid #1a2332" }}>{["DATA","SIMBOLO","DIR","ENTRY","EXIT","P&L","STATO MENTALE","SETUP"].map(h=><th key={h} style={{ textAlign:"left", padding:"6px 8px", fontSize:9, color:"#556068", letterSpacing:1, fontWeight:400 }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {trades.slice(0,5).map(t=>(
+                      <tr key={t.id} className="trade-row">
+                        <td style={{ padding:"10px 8px", color:"#556068", fontSize:11 }}>{t.date}</td>
+                        <td style={{ padding:"10px 8px", fontWeight:600 }}>{t.symbol}</td>
+                        <td style={{ padding:"10px 8px", color:t.direction==="LONG"?"#00ff88":"#ff4466", fontSize:10 }}>{t.direction}</td>
+                        <td style={{ padding:"10px 8px", color:"#8b949e" }}>{t.entry}</td>
+                        <td style={{ padding:"10px 8px", color:"#8b949e" }}>{t.exit}</td>
+                        <td style={{ padding:"10px 8px", color:t.pnl>=0?"#00ff88":"#ff4466", fontWeight:600 }}>{t.pnl>=0?"+":""}{t.pnl}$</td>
+                        <td style={{ padding:"10px 8px", fontSize:11 }}>{t.emotion_before}</td>
+                        <td style={{ padding:"10px 8px" }}><span className="tag">{t.setup}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="card" style={{ padding:40, textAlign:"center" }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>📊</div>
+                <div style={{ fontSize:14, color:"#556068", letterSpacing:1 }}>Nessun trade ancora.</div>
+                <div style={{ fontSize:11, color:"#2a3444", marginTop:8 }}>Vai nel Journal e aggiungi il tuo primo trade!</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -406,11 +481,17 @@ export default function TradingMindOS() {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>TRADE JOURNAL</h2>
-                <p style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>{trades.length}/{tradeLimit === 999 ? "∞" : tradeLimit} TRADE — PIANO {plan.name}</p>
+                <p style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>{trades.length}/{tradeLimit===999?"∞":tradeLimit} TRADE — PIANO {plan.name}</p>
               </div>
               <button className="btn-primary" onClick={()=>canAddTrade?setShowModal(true):setShowUpgrade(true)}>+ NUOVO TRADE</button>
             </div>
-            {trades.slice().reverse().map(t=>(
+            {trades.length===0 && (
+              <div className="card" style={{ padding:40, textAlign:"center" }}>
+                <div style={{ fontSize:32, marginBottom:12 }}>✍️</div>
+                <div style={{ fontSize:14, color:"#556068" }}>Inizia ad aggiungere i tuoi trade!</div>
+              </div>
+            )}
+            {trades.map(t=>(
               <div key={t.id} className="card" style={{ padding:20 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:16 }}>
                   <div style={{ display:"flex", gap:16, alignItems:"center" }}>
@@ -429,11 +510,11 @@ export default function TradingMindOS() {
                   <div><span className="label">Size</span><span style={{ fontSize:13 }}>{t.size}</span></div>
                 </div>
                 <div style={{ borderTop:"1px solid #0f1923", paddingTop:12, display:"flex", gap:24, marginBottom:12 }}>
-                  <div><span className="label">Prima</span><span style={{ fontSize:13 }}>{t.emotionBefore}</span></div>
-                  <div><span className="label">Durante</span><span style={{ fontSize:13 }}>{t.emotionDuring}</span></div>
-                  <div><span className="label">Dopo</span><span style={{ fontSize:13 }}>{t.emotionAfter}</span></div>
+                  <div><span className="label">Prima</span><span style={{ fontSize:13 }}>{t.emotion_before}</span></div>
+                  <div><span className="label">Durante</span><span style={{ fontSize:13 }}>{t.emotion_during}</span></div>
+                  <div><span className="label">Dopo</span><span style={{ fontSize:13 }}>{t.emotion_after}</span></div>
                 </div>
-                {t.notes && <div style={{ background:"#060a0f", border:"1px solid #1a2332", borderLeft:"2px solid #00ff8844", padding:"10px 14px", borderRadius:2 }}><span style={{ fontSize:10, color:"#556068" }}>NOTE — </span><span style={{ fontSize:12, color:"#8b949e" }}>{t.notes}</span></div>}
+                {t.notes && <div style={{ background:"#060a0f", border:"1px solid #1a2332", borderLeft:"2px solid #00ff8844", padding:"10px 14px" }}><span style={{ fontSize:10, color:"#556068" }}>NOTE — </span><span style={{ fontSize:12, color:"#8b949e" }}>{t.notes}</span></div>}
               </div>
             ))}
           </div>
@@ -468,7 +549,7 @@ export default function TradingMindOS() {
                   {[
                     {icon:"🎯",title:"Zona Migliore",text:"Quando sei Lucido o In Zona, il tuo win rate supera l'88%.",color:"#00ff88"},
                     {icon:"⚠️",title:"Zona Rischio",text:"Il FOMO ti costa: solo 14% di win rate. Evita di tradare.",color:"#ff4466"},
-                    {icon:"💡",title:"Pattern",text:"I tuoi migliori trade arrivano dopo una vittoria. Capitalizza.",color:"#ffaa00"},
+                    {icon:"💡",title:"Pattern",text:"I tuoi migliori trade arrivano dopo una vittoria.",color:"#ffaa00"},
                   ].map(ins=>(
                     <div key={ins.title} style={{ marginBottom:14, paddingLeft:12, borderLeft:`2px solid ${ins.color}44` }}>
                       <div style={{ fontSize:12, color:ins.color, fontWeight:600, marginBottom:4 }}>{ins.icon} {ins.title}</div>
@@ -478,11 +559,8 @@ export default function TradingMindOS() {
                 </div>
                 {user?.plan==="free" ? (
                   <div className="card" style={{ padding:24, borderColor:"#ff990022", position:"relative", overflow:"hidden" }}>
-                    <div style={{ filter:"blur(4px)", pointerEvents:"none" }}>
-                      <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>RIFLESSIONE GIORNALIERA</div>
-                      <div style={{ height:80, background:"#0f1923", borderRadius:2 }}/>
-                    </div>
-                    <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", background:"#0d111788" }}>
+                    <div style={{ filter:"blur(4px)", pointerEvents:"none", height:120, background:"#0f1923", borderRadius:2 }}/>
+                    <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
                       <div style={{ fontSize:24 }}>🔒</div>
                       <div style={{ fontSize:11, color:"#ff9900", letterSpacing:2, margin:"8px 0" }}>PIANO BETA+</div>
                       <button className="btn-primary" style={{ fontSize:9, borderColor:"#ff9900", color:"#ff9900" }} onClick={()=>setScreen("pricing")}>SBLOCCA →</button>
@@ -522,27 +600,29 @@ export default function TradingMindOS() {
                 </div>
               ))}
             </div>
-            <div className="card" style={{ padding:24 }}>
-              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◫ Performance per Simbolo</div>
-              <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                <thead><tr style={{ borderBottom:"1px solid #1a2332" }}>{["SIMBOLO","TRADE","WIN","LOSS","WIN RATE","P&L"].map(h=><th key={h} style={{ textAlign:"left", padding:"6px 8px", fontSize:9, color:"#556068", letterSpacing:1, fontWeight:400 }}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {Object.entries(trades.reduce((acc,t)=>{
-                    if(!acc[t.symbol])acc[t.symbol]={trades:0,wins:0,losses:0,pnl:0};
-                    acc[t.symbol].trades++; t.pnl>0?acc[t.symbol].wins++:acc[t.symbol].losses++; acc[t.symbol].pnl+=t.pnl; return acc;
-                  },{})).map(([sym,data])=>(
-                    <tr key={sym} className="trade-row">
-                      <td style={{ padding:"10px 8px", fontWeight:600 }}>{sym}</td>
-                      <td style={{ padding:"10px 8px", color:"#556068" }}>{data.trades}</td>
-                      <td style={{ padding:"10px 8px", color:"#00ff88" }}>{data.wins}</td>
-                      <td style={{ padding:"10px 8px", color:"#ff4466" }}>{data.losses}</td>
-                      <td style={{ padding:"10px 8px", color:Math.round(data.wins/data.trades*100)>=50?"#00ff88":"#ff4466" }}>{Math.round(data.wins/data.trades*100)}%</td>
-                      <td style={{ padding:"10px 8px", fontWeight:600, color:data.pnl>=0?"#00ff88":"#ff4466" }}>{data.pnl>=0?"+":""}{data.pnl.toFixed(2)}$</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {trades.length > 0 && (
+              <div className="card" style={{ padding:24 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◫ Performance per Simbolo</div>
+                <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                  <thead><tr style={{ borderBottom:"1px solid #1a2332" }}>{["SIMBOLO","TRADE","WIN","LOSS","WIN RATE","P&L"].map(h=><th key={h} style={{ textAlign:"left", padding:"6px 8px", fontSize:9, color:"#556068", letterSpacing:1, fontWeight:400 }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {Object.entries(trades.reduce((acc,t)=>{
+                      if(!acc[t.symbol])acc[t.symbol]={trades:0,wins:0,losses:0,pnl:0};
+                      acc[t.symbol].trades++; t.pnl>0?acc[t.symbol].wins++:acc[t.symbol].losses++; acc[t.symbol].pnl+=t.pnl; return acc;
+                    },{})).map(([sym,data])=>(
+                      <tr key={sym} className="trade-row">
+                        <td style={{ padding:"10px 8px", fontWeight:600 }}>{sym}</td>
+                        <td style={{ padding:"10px 8px", color:"#556068" }}>{data.trades}</td>
+                        <td style={{ padding:"10px 8px", color:"#00ff88" }}>{data.wins}</td>
+                        <td style={{ padding:"10px 8px", color:"#ff4466" }}>{data.losses}</td>
+                        <td style={{ padding:"10px 8px", color:Math.round(data.wins/data.trades*100)>=50?"#00ff88":"#ff4466" }}>{Math.round(data.wins/data.trades*100)}%</td>
+                        <td style={{ padding:"10px 8px", fontWeight:600, color:data.pnl>=0?"#00ff88":"#ff4466" }}>{data.pnl>=0?"+":""}{data.pnl.toFixed(2)}$</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -572,8 +652,8 @@ export default function TradingMindOS() {
               <div>
                 <label className="label">Stato Emotivo — Prima / Durante / Dopo</label>
                 <div className="grid-3">
-                  {["emotionBefore","emotionDuring","emotionAfter"].map(f=>(
-                    <select key={f} className="select" style={{ width:"100%" }} value={newTrade[f]} onChange={e=>setNewTrade({...newTrade,[f]:e.target.value})}>
+                  {[["emotion_before","emotion_before"],["emotion_during","emotion_during"],["emotion_after","emotion_after"]].map(([field])=>(
+                    <select key={field} className="select" style={{ width:"100%" }} value={newTrade[field]} onChange={e=>setNewTrade({...newTrade,[field]:e.target.value})}>
                       {EMOTIONS.map(em=><option key={em}>{em}</option>)}
                     </select>
                   ))}
@@ -597,7 +677,7 @@ export default function TradingMindOS() {
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8 }}>LIMITE RAGGIUNTO</div>
             <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8, marginBottom:24 }}>
               Hai raggiunto il limite di <strong style={{ color:"#00ff88" }}>{tradeLimit} trade</strong> del piano {plan.name}.<br/>
-              Fai upgrade per continuare a tracciare il tuo trading.
+              Fai upgrade per continuare.
             </div>
             <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
               <button className="btn-primary" style={{ borderColor:"#556068", color:"#556068" }} onClick={()=>setShowUpgrade(false)}>NON ORA</button>
