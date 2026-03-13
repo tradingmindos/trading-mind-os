@@ -100,7 +100,7 @@ function LoginPage({ onLogin, onGoToPricing }) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         const userData = data.user?.user_metadata;
-        onLogin({ name: userData?.name || email.split("@")[0], email, plan: "pro", id: data.user?.id });
+        onLogin({ name: userData?.name || email.split("@")[0], email, plan: userData?.plan || "free", id: data.user?.id });
       }
     } catch (err) {
       setError(err.message === "Invalid login credentials" ? "Email o password errati." : err.message);
@@ -238,7 +238,14 @@ export default function TradingMindOS() {
   const [showModal, setShowModal] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [time, setTime] = useState(new Date());
-  const [newTrade, setNewTrade] = useState({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotion_before:"🧠 Lucido", emotion_during:"🧠 Lucido", emotion_after:"🧠 Lucido", notes:"", setup:"" });
+  const [newTrade, setNewTrade] = useState({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotionBefore:"🧠 Lucido", emotionDuring:"🧠 Lucido", emotionAfter:"🧠 Lucido", notes:"", setup:"" });
+  const [reports, setReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [newReport, setNewReport] = useState({ title:"", week:"", content:"", min_plan:"mid" });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [reportImages, setReportImages] = useState([]);
+  const ADMIN_EMAIL = "nicocabrelli@gmail.com";
 
   useEffect(() => {
     const t = setInterval(()=>setTime(new Date()),1000);
@@ -269,9 +276,15 @@ export default function TradingMindOS() {
     if (data) setTrades(data);
   };
 
+  const loadReports = async () => {
+    const { data } = await supabase.from("reports").select("*").eq("published", true).order("created_at", { ascending: false });
+    if (data) setReports(data);
+  };
+
   const handleLogin = (userData) => {
     setUser(userData);
     loadTrades(userData.id);
+    loadReports();
     setScreen("app");
   };
 
@@ -313,7 +326,7 @@ export default function TradingMindOS() {
     if (!error && data) {
       setTrades([data[0], ...trades]);
       setShowModal(false);
-      setNewTrade({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotion_before:"🧠 Lucido", emotion_during:"🧠 Lucido", emotion_after:"🧠 Lucido", notes:"", setup:"" });
+      setNewTrade({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotionBefore:"🧠 Lucido", emotionDuring:"🧠 Lucido", emotionAfter:"🧠 Lucido", notes:"", setup:"" });
     }
   };
 
@@ -336,6 +349,7 @@ export default function TradingMindOS() {
     {id:"journal",label:"Journal",icon:"◈"},
     {id:"psychology",label:"Psicologia",icon:"◉"},
     {id:"stats",label:"Statistiche",icon:"◫"},
+    {id:"reports",label:"Report",icon:"◐"},
   ];
 
   return (
@@ -625,6 +639,90 @@ export default function TradingMindOS() {
             )}
           </div>
         )}
+
+        {/* REPORTS */}
+        {activeTab==="reports" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:20 }} className="fade-in">
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>REPORT SETTIMANALI</h2>
+                <p style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>ANALISI MACRO — SETUP — MERCATI</p>
+              </div>
+              {user?.email === ADMIN_EMAIL && (
+                <button className="btn-primary" style={{ borderColor:"#ff9900", color:"#ff9900" }} onClick={()=>setShowAdminPanel(true)}>
+                  ⚙ PUBBLICA REPORT
+                </button>
+              )}
+            </div>
+
+            {/* Locked for free/beta */}
+            {(user?.plan==="free" || user?.plan==="beta") ? (
+              <div className="card" style={{ padding:48, textAlign:"center", borderColor:"#ff990022" }}>
+                <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8, color:"#ff9900" }}>CONTENUTO PREMIUM</div>
+                <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8, marginBottom:24 }}>
+                  I report settimanali includono analisi macro, setup grafici e mercati da monitorare.<br/>
+                  Disponibile dal piano <strong style={{ color:"#00ff88" }}>MID</strong> in su.
+                </div>
+                <button className="btn-solid" onClick={()=>setScreen("pricing")}>SBLOCCA CON MID →</button>
+              </div>
+            ) : selectedReport ? (
+              /* Report Detail */
+              <div>
+                <button onClick={()=>setSelectedReport(null)} style={{ background:"none", border:"none", color:"#556068", cursor:"pointer", fontSize:11, letterSpacing:2, marginBottom:16 }}>← TORNA ALLA LISTA</button>
+                <div className="card" style={{ padding:32 }}>
+                  <div style={{ marginBottom:24 }}>
+                    <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:8 }}>◐ REPORT SETTIMANALE — {selectedReport.week}</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, letterSpacing:4, color:"#c9d1d9", marginBottom:8 }}>{selectedReport.title}</div>
+                    <div style={{ fontSize:10, color:"#556068" }}>{new Date(selectedReport.created_at).toLocaleDateString("it-IT", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}</div>
+                  </div>
+                  <div style={{ borderTop:"1px solid #1a2332", paddingTop:24, fontSize:13, color:"#8b949e", lineHeight:2, whiteSpace:"pre-wrap" }}>
+                    {selectedReport.content}
+                  </div>
+                  {selectedReport.images && selectedReport.images.length > 0 && (
+                    <div style={{ marginTop:32 }}>
+                      <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◈ GRAFICI</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(300px, 1fr))", gap:16 }}>
+                        {selectedReport.images.map((url, i) => (
+                          <img key={i} src={url} alt={`Grafico ${i+1}`} style={{ width:"100%", borderRadius:4, border:"1px solid #1a2332", cursor:"pointer" }} onClick={()=>window.open(url,"_blank")} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Reports List */
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {reports.length === 0 ? (
+                  <div className="card" style={{ padding:40, textAlign:"center" }}>
+                    <div style={{ fontSize:32, marginBottom:12 }}>📊</div>
+                    <div style={{ fontSize:14, color:"#556068" }}>Nessun report ancora pubblicato.</div>
+                    <div style={{ fontSize:11, color:"#2a3444", marginTop:8 }}>Il primo report arriverà domenica sera.</div>
+                  </div>
+                ) : reports.map(r => (
+                  <div key={r.id} className="card" style={{ padding:24, cursor:"pointer", transition:"border-color 0.2s", borderColor:"#1a2332" }}
+                    onClick={()=>setSelectedReport(r)}
+                    onMouseEnter={e=>e.currentTarget.style.borderColor="#00ff8844"}
+                    onMouseLeave={e=>e.currentTarget.style.borderColor="#1a2332"}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                      <div>
+                        <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:6 }}>◐ {r.week}</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:3, color:"#c9d1d9", marginBottom:8 }}>{r.title}</div>
+                        <div style={{ fontSize:11, color:"#556068", lineHeight:1.6 }}>{r.content.substring(0, 120)}...</div>
+                      </div>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:8, minWidth:100 }}>
+                        <span style={{ fontSize:9, color:"#00ff88", border:"1px solid #00ff8844", padding:"2px 8px" }}>{r.min_plan.toUpperCase()}+</span>
+                        {r.images && r.images.length > 0 && <span style={{ fontSize:9, color:"#556068" }}>📈 {r.images.length} grafici</span>}
+                        <span style={{ fontSize:9, color:"#556068" }}>{new Date(r.created_at).toLocaleDateString("it-IT")}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* Modal Nuovo Trade */}
@@ -652,7 +750,7 @@ export default function TradingMindOS() {
               <div>
                 <label className="label">Stato Emotivo — Prima / Durante / Dopo</label>
                 <div className="grid-3">
-                  {[["emotion_before","emotion_before"],["emotion_during","emotion_during"],["emotion_after","emotion_after"]].map(([field])=>(
+                  {[["emotionBefore","emotion_before"],["emotionDuring","emotion_during"],["emotionAfter","emotion_after"]].map(([field])=>(
                     <select key={field} className="select" style={{ width:"100%" }} value={newTrade[field]} onChange={e=>setNewTrade({...newTrade,[field]:e.target.value})}>
                       {EMOTIONS.map(em=><option key={em}>{em}</option>)}
                     </select>
@@ -669,6 +767,82 @@ export default function TradingMindOS() {
         </div>
       )}
 
+
+      {/* Admin Panel */}
+      {showAdminPanel && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowAdminPanel(false)}>
+          <div className="modal" style={{ width:700 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+              <h3 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:4, color:"#ff9900" }}>⚙ PUBBLICA REPORT</h3>
+              <button onClick={()=>setShowAdminPanel(false)} style={{ background:"none", border:"none", color:"#556068", cursor:"pointer", fontSize:20 }}>✕</button>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <div className="grid-2">
+                <div><label className="label">Titolo Report</label><input className="input" placeholder="Es: Setup della settimana — Gold e NAS" value={newReport.title} onChange={e=>setNewReport({...newReport,title:e.target.value})}/></div>
+                <div><label className="label">Settimana</label><input className="input" placeholder="Es: 10-16 Marzo 2025" value={newReport.week} onChange={e=>setNewReport({...newReport,week:e.target.value})}/></div>
+              </div>
+              <div>
+                <label className="label">Piano minimo richiesto</label>
+                <select className="select" style={{ width:"100%" }} value={newReport.min_plan} onChange={e=>setNewReport({...newReport,min_plan:e.target.value})}>
+                  <option value="mid">MID e PRO</option>
+                  <option value="pro">Solo PRO</option>
+                </select>
+              </div>
+              <div>
+                <label className="label">Analisi / Contenuto</label>
+                <textarea className="input" placeholder="Scrivi qui la tua analisi macro, setup da monitorare, livelli chiave..." value={newReport.content} onChange={e=>setNewReport({...newReport,content:e.target.value})} style={{ height:200, resize:"vertical", lineHeight:1.8 }}/>
+              </div>
+              <div>
+                <label className="label">Grafici TradingView (immagini)</label>
+                <input type="file" accept="image/*" multiple onChange={async (e) => {
+                  setUploadingImages(true);
+                  const urls = [];
+                  for (const file of Array.from(e.target.files)) {
+                    const path = `${Date.now()}_${file.name.replace(/\s/g,"_")}`;
+                    const { data, error } = await supabase.storage.from("reports").upload(path, file);
+                    if (!error) {
+                      const { data: urlData } = supabase.storage.from("reports").getPublicUrl(path);
+                      urls.push(urlData.publicUrl);
+                    }
+                  }
+                  setReportImages(prev => [...prev, ...urls]);
+                  setUploadingImages(false);
+                }} style={{ color:"#556068", fontSize:11 }}/>
+                {uploadingImages && <div style={{ fontSize:10, color:"#00ff88", marginTop:8 }} className="pulse">Caricamento immagini...</div>}
+                {reportImages.length > 0 && (
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:12 }}>
+                    {reportImages.map((url,i) => (
+                      <div key={i} style={{ position:"relative" }}>
+                        <img src={url} alt="" style={{ width:80, height:60, objectFit:"cover", borderRadius:2, border:"1px solid #1a2332" }}/>
+                        <button onClick={()=>setReportImages(prev=>prev.filter((_,j)=>j!==i))} style={{ position:"absolute", top:-6, right:-6, background:"#ff4466", border:"none", color:"white", borderRadius:"50%", width:16, height:16, fontSize:9, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:"flex", gap:12, justifyContent:"flex-end", marginTop:8 }}>
+                <button className="btn-primary" style={{ borderColor:"#556068", color:"#556068" }} onClick={()=>setShowAdminPanel(false)}>ANNULLA</button>
+                <button style={{ background:"#ff9900", border:"1px solid #ff9900", color:"#060a0f", fontFamily:"inherit", fontSize:11, letterSpacing:2, padding:"10px 24px", cursor:"pointer", borderRadius:2, fontWeight:700 }}
+                  disabled={!newReport.title || !newReport.content || uploadingImages}
+                  onClick={async () => {
+                    const { data, error } = await supabase.from("reports").insert([{
+                      ...newReport, images: reportImages, published: true
+                    }]).select();
+                    if (!error && data) {
+                      setReports(prev => [data[0], ...prev]);
+                      setShowAdminPanel(false);
+                      setNewReport({ title:"", week:"", content:"", min_plan:"mid" });
+                      setReportImages([]);
+                      setActiveTab("reports");
+                    }
+                  }}>
+                  PUBBLICA →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal Upgrade */}
       {showUpgrade && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowUpgrade(false)}>
