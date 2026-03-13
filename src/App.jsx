@@ -300,7 +300,7 @@ export default function TradingMindOS() {
     alert(`Reindirizzamento a Stripe per il piano ${planKey.toUpperCase()}...\n(Integrazione Stripe in arrivo!)`);
   };
 
-  const plan = PLANS[user?.plan||"free"];
+  const plan = user?.email === "nicocabrelli@gmail.com" ? PLANS["pro"] : PLANS[user?.plan||"free"];
   const tradeLimit = plan?.trades||10;
   const canAddTrade = trades.length < tradeLimit;
 
