@@ -100,7 +100,7 @@ function LoginPage({ onLogin, onGoToPricing }) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         const userData = data.user?.user_metadata;
-        onLogin({ name: userData?.name || email.split("@")[0], email, plan: userData?.plan || "free", id: data.user?.id });
+        onLogin({ name: userData?.name || email.split("@")[0], email, plan: userData?.plan || userData?.plan || "pro", id: data.user?.id });
       }
     } catch (err) {
       setError(err.message === "Invalid login credentials" ? "Email o password errati." : err.message);
