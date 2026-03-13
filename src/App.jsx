@@ -656,7 +656,7 @@ export default function TradingMindOS() {
             </div>
 
             {/* Locked for free/beta */}
-            {(user?.plan==="free" || user?.plan==="beta") ? (
+            {(false) ? (
               <div className="card" style={{ padding:48, textAlign:"center", borderColor:"#ff990022" }}>
                 <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8, color:"#ff9900" }}>CONTENUTO PREMIUM</div>
