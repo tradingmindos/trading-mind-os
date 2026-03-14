@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./supabase";
+import { stripePromise, PRICE_IDS } from "./stripe";
 
 // ─── DATI ───────────────────────────────────────────────────────────────────
 const EMOTIONS = ["😤 FOMO", "😰 Paura", "🧠 Lucido", "😤 Vendetta", "😴 Stanco", "💪 Fiducioso", "😬 Ansioso", "🎯 In Zona"];
@@ -100,7 +101,7 @@ function LoginPage({ onLogin, onGoToPricing }) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         const userData = data.user?.user_metadata;
-        onLogin({ name: userData?.name || email.split("@")[0], email, plan: "pro", id: data.user?.id });
+        onLogin({ name: userData?.name || email.split("@")[0], email, plan: userData?.plan || "free", id: data.user?.id });
       }
     } catch (err) {
       setError(err.message === "Invalid login credentials" ? "Email o password errati." : err.message);
@@ -295,12 +296,26 @@ export default function TradingMindOS() {
     setScreen("login");
   };
 
-  const handleSelectPlan = (planKey) => {
+  const handleSelectPlan = async (planKey) => {
     if (planKey==="free") { setScreen("app"); return; }
-    alert(`Reindirizzamento a Stripe per il piano ${planKey.toUpperCase()}...\n(Integrazione Stripe in arrivo!)`);
+    const priceId = PRICE_IDS[planKey];
+    if (!priceId) return;
+    try {
+      const stripe = await stripePromise;
+      const { error } = await stripe.redirectToCheckout({
+        lineItems: [{ price: priceId, quantity: 1 }],
+        mode: "subscription",
+        successUrl: "https://trading-mind-os.vercel.app/?payment=success",
+        cancelUrl: "https://trading-mind-os.vercel.app/?payment=cancelled",
+        customerEmail: user?.email || undefined,
+      });
+      if (error) alert(error.message);
+    } catch (err) {
+      alert("Errore: " + err.message);
+    }
   };
 
-  const plan = user?.email === "nicocabrelli@gmail.com" ? PLANS["pro"] : PLANS[user?.plan||"free"];
+  const plan = PLANS[user?.plan||"free"];
   const tradeLimit = plan?.trades||10;
   const canAddTrade = trades.length < tradeLimit;
 
@@ -656,7 +671,7 @@ export default function TradingMindOS() {
             </div>
 
             {/* Locked for free/beta */}
-            {(false) ? (
+            {(user?.plan==="free" || user?.plan==="beta") ? (
               <div className="card" style={{ padding:48, textAlign:"center", borderColor:"#ff990022" }}>
                 <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8, color:"#ff9900" }}>CONTENUTO PREMIUM</div>
