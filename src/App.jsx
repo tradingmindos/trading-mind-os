@@ -275,15 +275,23 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
                   <div style={{ display:"flex", flexDirection:"column", gap:8, fontSize:12 }}>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ color:"#556068" }}>Intestatario</span>
-                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>Nicolo Cabrelli</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>Ente Trust CABRELLI NICOLÓ</span>
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ color:"#556068" }}>IBAN</span>
-                      <span style={{ color:"#c9d1d9", fontWeight:600, letterSpacing:1 }}>IT00 X000 0000 0000 0000 0000 000</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600, letterSpacing:1 }}>IE71SUMU99036512719152</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>BIC</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>SUMUIE22XXX</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>Istituto</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>SumUp Limited</span>
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ color:"#556068" }}>Causale</span>
-                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>TMOS {selectedPlanKey?.toUpperCase()} — [TUA EMAIL]</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>Contributo umanitario</span>
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
                       <span style={{ color:"#556068" }}>Importo</span>
@@ -295,12 +303,12 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
                 </div>
 
                 <div style={{ marginBottom:20 }}>
-                  <label className="label">La tua email — per attivare il piano e ricevere la fattura</label>
+                  <label className="label">La tua email — per attivare il piano e ricevere la fattura entro 24h</label>
                   <input className="input" type="email" placeholder="tua@email.com" value={bonifEmail} onChange={e=>setBonifEmail(e.target.value)} />
                 </div>
 
                 <div style={{ fontSize:11, color:"#556068", lineHeight:1.8, marginBottom:20, padding:"12px", background:"#060a0f", borderRadius:4, borderLeft:"2px solid #00ff8844" }}>
-                  ℹ️ Dopo il bonifico clicca "Ho effettuato il pagamento". Il tuo piano verrà attivato entro 24 ore lavorative dalla ricezione del pagamento.
+                  ℹ️ Inserisci la tua email e clicca "Ho effettuato il pagamento". Entro 24 ore lavorative riceverai la fattura e il tuo piano verrà attivato automaticamente.
                 </div>
 
                 <div style={{ display:"flex", gap:12, justifyContent:"flex-end" }}>
