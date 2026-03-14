@@ -150,6 +150,25 @@ function LoginPage({ onLogin, onGoToPricing }) {
 // ─── PRICING ─────────────────────────────────────────────────────────────────
 function PricingPage({ onBack, onSelectPlan, currentPlan }) {
   const [billing, setBilling] = useState("monthly");
+  const [showBonifico, setShowBonifico] = useState(false);
+  const [selectedPlanKey, setSelectedPlanKey] = useState(null);
+  const [bonifEmail, setBonifEmail] = useState("");
+  const [bonifSent, setBonifSent] = useState(false);
+
+  const PLANS_LOCAL = {
+    free:  { name: "FREE",  color: "#556068", monthly: 0,   annual: 0 },
+    beta:  { name: "BETA",  color: "#00aaff", monthly: 7,   annual: 59 },
+    mid:   { name: "MID",   color: "#00ff88", monthly: 27,  annual: 227 },
+    pro:   { name: "PRO",   color: "#ff9900", monthly: 97,  annual: 797 },
+  };
+
+  const handleScelgi = (key) => {
+    if (key === "free") { onSelectPlan("free"); return; }
+    setSelectedPlanKey(key);
+    setBonifEmail("");
+    setBonifSent(false);
+    setShowBonifico(true);
+  };
 
   return (
     <div style={{ minHeight:"100vh", background:"#060a0f", padding:"40px 24px", fontFamily:"'IBM Plex Mono',monospace" }}>
@@ -190,7 +209,7 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
                     </div>
                   ))}
                 </div>
-                <button onClick={()=>onSelectPlan(key)} disabled={isCurrent}
+                <button onClick={()=>handleScelgi(key)} disabled={isCurrent}
                   style={{ width:"100%", padding:10, fontFamily:"'IBM Plex Mono',monospace", fontSize:11, letterSpacing:2, cursor:isCurrent?"default":"pointer", borderRadius:2,
                     border:`1px solid ${plan.color}`, background:isCurrent?plan.color+"22":key==="pro"?plan.color:"transparent",
                     color:key==="pro"?"#060a0f":plan.color, fontWeight:key==="pro"?700:400, transition:"all 0.2s" }}>
@@ -226,6 +245,93 @@ function PricingPage({ onBack, onSelectPlan, currentPlan }) {
           </div>
         </div>
       </div>
+
+      {/* Modal Bonifico */}
+      {showBonifico && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowBonifico(false)}>
+          <div className="modal" style={{ maxWidth:480 }}>
+            {!bonifSent ? (
+              <>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+                  <h3 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:4 }}>
+                    ACQUISTA — {selectedPlanKey?.toUpperCase()}
+                  </h3>
+                  <button onClick={()=>setShowBonifico(false)} style={{ background:"none", border:"none", color:"#556068", cursor:"pointer", fontSize:20 }}>✕</button>
+                </div>
+
+                <div style={{ background:"#060a0f", border:"1px solid #1a2332", borderRadius:4, padding:20, marginBottom:20 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>RIEPILOGO ORDINE</div>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:13 }}>Trading Mind OS — {selectedPlanKey?.toUpperCase()}</span>
+                    <span style={{ fontSize:20, color: PLANS_LOCAL[selectedPlanKey]?.color, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2 }}>
+                      {billing==="monthly" ? PLANS_LOCAL[selectedPlanKey]?.monthly : PLANS_LOCAL[selectedPlanKey]?.annual}€
+                      <span style={{ fontSize:10, color:"#556068", marginLeft:4 }}>/{billing==="monthly"?"mese":"anno"}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ background:"#060a0f", border:"1px solid #00ff8822", borderRadius:4, padding:20, marginBottom:20 }}>
+                  <div style={{ fontSize:9, color:"#00ff88", letterSpacing:2, marginBottom:12 }}>DATI BONIFICO</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, fontSize:12 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>Intestatario</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>Nicolo Cabrelli</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>IBAN</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600, letterSpacing:1 }}>IT00 X000 0000 0000 0000 0000 000</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>Causale</span>
+                      <span style={{ color:"#c9d1d9", fontWeight:600 }}>TMOS {selectedPlanKey?.toUpperCase()} — [TUA EMAIL]</span>
+                    </div>
+                    <div style={{ display:"flex", justifyContent:"space-between" }}>
+                      <span style={{ color:"#556068" }}>Importo</span>
+                      <span style={{ color:"#00ff88", fontWeight:600 }}>
+                        {billing==="monthly" ? PLANS_LOCAL[selectedPlanKey]?.monthly : PLANS_LOCAL[selectedPlanKey]?.annual}€
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom:20 }}>
+                  <label className="label">La tua email — per attivare il piano e ricevere la fattura</label>
+                  <input className="input" type="email" placeholder="tua@email.com" value={bonifEmail} onChange={e=>setBonifEmail(e.target.value)} />
+                </div>
+
+                <div style={{ fontSize:11, color:"#556068", lineHeight:1.8, marginBottom:20, padding:"12px", background:"#060a0f", borderRadius:4, borderLeft:"2px solid #00ff8844" }}>
+                  ℹ️ Dopo il bonifico clicca "Ho effettuato il pagamento". Il tuo piano verrà attivato entro 24 ore lavorative dalla ricezione del pagamento.
+                </div>
+
+                <div style={{ display:"flex", gap:12, justifyContent:"flex-end" }}>
+                  <button className="btn-primary" style={{ borderColor:"#556068", color:"#556068" }} onClick={()=>setShowBonifico(false)}>ANNULLA</button>
+                  <button className="btn-solid" disabled={!bonifEmail} onClick={async()=>{
+                    await supabase.from("payments").insert([{
+                      email: bonifEmail,
+                      plan: selectedPlanKey,
+                      billing,
+                      amount: billing==="monthly" ? PLANS_LOCAL[selectedPlanKey]?.monthly : PLANS_LOCAL[selectedPlanKey]?.annual,
+                      status: "pending",
+                      created_at: new Date().toISOString()
+                    }]);
+                    setBonifSent(true);
+                  }}>HO EFFETTUATO IL PAGAMENTO →</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign:"center", padding:"20px 0" }}>
+                <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:12 }}>GRAZIE!</div>
+                <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8, marginBottom:24 }}>
+                  Abbiamo registrato la tua richiesta per il piano <strong style={{ color: PLANS_LOCAL[selectedPlanKey]?.color }}>{selectedPlanKey?.toUpperCase()}</strong>.<br/>
+                  Riceverai una email a <strong style={{ color:"#00ff88" }}>{bonifEmail}</strong> entro 24 ore<br/>con la conferma di attivazione e la fattura.
+                </div>
+                <button className="btn-solid" onClick={()=>setShowBonifico(false)}>CHIUDI</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -301,17 +407,19 @@ export default function TradingMindOS() {
     const priceId = PRICE_IDS[planKey];
     if (!priceId) return;
     try {
-      const stripe = await stripePromise;
-      const { error } = await stripe.redirectToCheckout({
-        lineItems: [{ price: priceId, quantity: 1 }],
-        mode: "subscription",
-        successUrl: "https://trading-mind-os.vercel.app/?payment=success",
-        cancelUrl: "https://trading-mind-os.vercel.app/?payment=cancelled",
-        customerEmail: user?.email || undefined,
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { priceId, email: user?.email, planKey }
       });
-      if (error) alert(error.message);
+      if (error) throw error;
+      if (data?.url) window.location.href = data.url;
     } catch (err) {
-      alert("Errore: " + err.message);
+      // Fallback: open Stripe payment link directly
+      const links = {
+        beta: "https://buy.stripe.com/test/beta",
+        mid:  "https://buy.stripe.com/test/mid",
+        pro:  "https://buy.stripe.com/test/pro",
+      };
+      alert("Checkout Stripe in configurazione. Contatta il supporto per abbonarti al piano " + planKey.toUpperCase() + ".");
     }
   };
 
