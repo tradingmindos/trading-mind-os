@@ -357,6 +357,18 @@ export default function TradingMindOS() {
   const [reports, setReports] = useState([]);
   const [psychTab, setPsychTab] = useState("overview");
   const [preSession, setPreSession] = useState({ emotion:"", sleep:5, focus:5, confidence:5, ready:"", notes:"" });
+  const [sessionActive, setSessionActive] = useState(false);
+  const [sessionTimer, setSessionTimer] = useState(0);
+  const [sessionEmotion, setSessionEmotion] = useState("");
+  const [sessionNotes, setSessionNotes] = useState([]);
+  const [quickNote, setQuickNote] = useState("");
+  const [checklist, setChecklist] = useState([false,false,false,false,false,false]);
+
+  useEffect(() => {
+    if (!sessionActive) return;
+    const interval = setInterval(() => setSessionTimer(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [sessionActive]);
   const [postSession, setPostSession] = useState({ respected_plan:"", emotional_pnl:5, errors:[], improve:"", notes:"" });
   const [selectedReport, setSelectedReport] = useState(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -679,6 +691,7 @@ export default function TradingMindOS() {
               {[
                 {id:"overview", label:"Overview"},
                 {id:"pre", label:"Pre-Sessione"},
+                {id:"session", label:"Sessione Live"},
                 {id:"post", label:"Post-Sessione"},
                 {id:"insights", label:"Insights"},
               ].map(t => (
@@ -830,6 +843,154 @@ export default function TradingMindOS() {
               </div>
             )}
 
+
+            {/* SESSIONE LIVE */}
+            {psychTab==="session" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+                {/* Timer */}
+                <div className="card" style={{ padding:24, borderColor:"#00aaff22" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+                    <div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:4, color:"#00aaff" }}>SESSIONE LIVE</div>
+                      <div style={{ fontSize:11, color:"#556068" }}>Monitora il tuo stato mentale in tempo reale</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:40, letterSpacing:4, color: sessionActive ? "#00ff88" : "#556068" }}>
+                        {String(Math.floor(sessionTimer/3600)).padStart(2,"0")}:{String(Math.floor((sessionTimer%3600)/60)).padStart(2,"0")}:{String(sessionTimer%60).padStart(2,"0")}
+                      </div>
+                      <div style={{ fontSize:9, color:"#556068", letterSpacing:2 }}>DURATA SESSIONE</div>
+                    </div>
+                  </div>
+                  <div style={{ display:"flex", gap:12 }}>
+                    <button className="btn-solid" style={{ flex:1, background: sessionActive ? "#ff4466" : "#00ff88", borderColor: sessionActive ? "#ff4466" : "#00ff88" }}
+                      onClick={()=>setSessionActive(!sessionActive)}>
+                      {sessionActive ? "⏸ PAUSA SESSIONE" : "▶ AVVIA SESSIONE"}
+                    </button>
+                    <button className="btn-primary" style={{ borderColor:"#556068", color:"#556068" }}
+                      onClick={()=>{ setSessionActive(false); setSessionTimer(0); setSessionNotes([]); }}>
+                      ⏹ TERMINA
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stato emotivo live */}
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◉ STATO EMOTIVO ATTUALE</div>
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    {["😤 FOMO","😰 Ansioso","😴 Stanco","🧠 Lucido","💪 Fiducioso","🎯 In Zona","😤 Arrabbiato","😬 Nervoso"].map(e=>(
+                      <button key={e} onClick={()=>setSessionEmotion(e)}
+                        style={{ padding:"8px 14px", borderRadius:2,
+                          border:`1px solid ${sessionEmotion===e?"#00ff88":"#1a2332"}`,
+                          background:sessionEmotion===e?"#00ff8822":"transparent",
+                          color:sessionEmotion===e?"#00ff88":"#556068",
+                          cursor:"pointer", fontSize:12, fontFamily:"inherit", transition:"all 0.2s" }}>
+                        {e}
+                      </button>
+                    ))}
+                  </div>
+                  {sessionEmotion && (
+                    <div style={{ marginTop:12, padding:"10px 16px", background:"#060a0f", borderRadius:2,
+                      borderLeft:`2px solid ${["😤 FOMO","😰 Ansioso","😤 Arrabbiato","😬 Nervoso"].includes(sessionEmotion)?"#ff4466":"#00ff88"}` }}>
+                      <div style={{ fontSize:11, color:["😤 FOMO","😰 Ansioso","😤 Arrabbiato","😬 Nervoso"].includes(sessionEmotion)?"#ff4466":"#00ff88" }}>
+                        {["😤 FOMO","😰 Ansioso","😤 Arrabbiato","😬 Nervoso"].includes(sessionEmotion)
+                          ? "⚠️ Attenzione — il tuo stato attuale aumenta il rischio di errori. Considera una pausa."
+                          : "✅ Stato ottimale — sei nelle condizioni ideali per operare."}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Alert psicologici */}
+                <div className="card" style={{ padding:24, borderColor:"#ff446622" }}>
+                  <div style={{ fontSize:9, color:"#ff4466", letterSpacing:2, marginBottom:16 }}>⚠ ALERT PSICOLOGICI</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {[
+                      { text:"Hai perso 3 trade consecutivi — considera una pausa di 30 minuti.", color:"#ff4466", icon:"🛑" },
+                      { text:"Stai tradando da più di 3 ore — la stanchezza aumenta gli errori.", color:"#ffaa00", icon:"⏰" },
+                      { text:"Ricorda: non sei obbligato ad operare. Il miglior trade è a volte non aprire.", color:"#00aaff", icon:"💡" },
+                    ].map((alert,i)=>(
+                      <div key={i} style={{ display:"flex", gap:12, padding:"12px 16px", background:"#060a0f", borderRadius:2, borderLeft:`2px solid ${alert.color}44` }}>
+                        <span style={{ fontSize:16 }}>{alert.icon}</span>
+                        <span style={{ fontSize:11, color:"#8b949e", lineHeight:1.6 }}>{alert.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Checklist pre-trade */}
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◈ CHECKLIST PRE-TRADE</div>
+                  <div style={{ fontSize:11, color:"#556068", marginBottom:16 }}>Spunta ogni punto PRIMA di aprire una posizione</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    {[
+                      "Ho identificato chiaramente il setup",
+                      "So dove metto lo stop loss",
+                      "Il risk/reward è almeno 1:2",
+                      "Non sto operando per revenge trading",
+                      "Il mercato è in linea con la mia analisi",
+                      "Non sono emotivamente compromesso",
+                    ].map((item,i)=>(
+                      <div key={i} onClick={()=>{
+                        const updated = [...(checklist)];
+                        updated[i] = !updated[i];
+                        setChecklist(updated);
+                      }} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background:"#060a0f",
+                        borderRadius:2, cursor:"pointer", border:`1px solid ${checklist[i]?"#00ff8844":"#1a2332"}`,
+                        transition:"all 0.2s" }}>
+                        <div style={{ width:18, height:18, borderRadius:2, border:`1px solid ${checklist[i]?"#00ff88":"#556068"}`,
+                          background:checklist[i]?"#00ff88":"transparent", display:"flex", alignItems:"center", justifyContent:"center",
+                          fontSize:11, color:"#060a0f", flexShrink:0 }}>
+                          {checklist[i]?"✓":""}
+                        </div>
+                        <span style={{ fontSize:12, color:checklist[i]?"#c9d1d9":"#556068" }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop:16, padding:"10px 16px", background:"#060a0f", borderRadius:2,
+                    borderColor: checklist.every(Boolean)?"#00ff8844":"#1a2332", border:"1px solid" }}>
+                    <span style={{ fontSize:11, color: checklist.every(Boolean)?"#00ff88":"#556068" }}>
+                      {checklist.filter(Boolean).length}/{checklist.length} completati
+                      {checklist.every(Boolean) ? " — ✅ Pronto per aprire!" : " — Completa tutti i punti prima di aprire"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Note veloci */}
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◈ NOTE VELOCI</div>
+                  <div style={{ display:"flex", gap:12, marginBottom:16 }}>
+                    <input className="input" placeholder="Scrivi una nota rapida durante la sessione..."
+                      value={quickNote} onChange={e=>setQuickNote(e.target.value)}
+                      onKeyDown={e=>{ if(e.key==="Enter" && quickNote.trim()){
+                        setSessionNotes([{text:quickNote, time:new Date().toLocaleTimeString("it-IT"), emotion:sessionEmotion},...sessionNotes]);
+                        setQuickNote("");
+                      }}}
+                      style={{ flex:1 }}/>
+                    <button className="btn-primary" onClick={()=>{
+                      if(quickNote.trim()){
+                        setSessionNotes([{text:quickNote, time:new Date().toLocaleTimeString("it-IT"), emotion:sessionEmotion},...sessionNotes]);
+                        setQuickNote("");
+                      }
+                    }}>+ AGGIUNGI</button>
+                  </div>
+                  {sessionNotes.length === 0 ? (
+                    <div style={{ fontSize:11, color:"#2a3444", textAlign:"center", padding:16 }}>Nessuna nota ancora — inizia a scrivere durante la sessione</div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {sessionNotes.map((note,i)=>(
+                        <div key={i} style={{ display:"flex", gap:12, padding:"10px 14px", background:"#060a0f", borderRadius:2, borderLeft:"2px solid #1a2332" }}>
+                          <span style={{ fontSize:10, color:"#556068", whiteSpace:"nowrap" }}>{note.time}</span>
+                          <span style={{ fontSize:12, color:"#8b949e", flex:1 }}>{note.text}</span>
+                          {note.emotion && <span style={{ fontSize:11 }}>{note.emotion}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
             {/* POST-SESSIONE */}
             {psychTab==="post" && (
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
