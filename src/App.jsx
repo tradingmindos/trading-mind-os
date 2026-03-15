@@ -872,6 +872,19 @@ export default function TradingMindOS() {
             {/* SESSIONE LIVE */}
             {psychTab==="session" && (
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                {plan.name === "FREE" ? (
+                  <div className="card" style={{ padding:48, textAlign:"center", borderColor:"#00aaff22" }}>
+                    <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8, color:"#00aaff" }}>FEATURE PREMIUM</div>
+                    <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8, marginBottom:24 }}>
+                      La Sessione Live include timer, monitoraggio emotivo in tempo reale,<br/>
+                      checklist pre-trade e note veloci durante la sessione.<br/>
+                      Disponibile dal piano <strong style={{ color:"#00aaff" }}>BETA</strong> in su.
+                    </div>
+                    <button className="btn-solid" style={{ background:"#00aaff", borderColor:"#00aaff" }} onClick={()=>setScreen("pricing")}>SBLOCCA CON BETA →</button>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
 
                 {/* Timer */}
                 <div className="card" style={{ padding:24, borderColor:"#00aaff22" }}>
@@ -1473,6 +1486,20 @@ export default function TradingMindOS() {
         {activeTab==="goals" && (
           <div style={{ display:"flex", flexDirection:"column", gap:20 }} className="fade-in">
             <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>OBIETTIVI E REGOLE</h2>
+
+            {plan.name === "FREE" ? (
+              <div className="card" style={{ padding:48, textAlign:"center", borderColor:"#00aaff22" }}>
+                <div style={{ fontSize:40, marginBottom:16 }}>🔒</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:28, letterSpacing:4, marginBottom:8, color:"#00aaff" }}>FEATURE PREMIUM</div>
+                <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8, marginBottom:24 }}>
+                  La sezione Obiettivi include le tue regole di trading personali,<br/>
+                  obiettivi mensili e parametri di risk management.<br/>
+                  Disponibile dal piano <strong style={{ color:"#00aaff" }}>BETA</strong> in su.
+                </div>
+                <button className="btn-solid" style={{ background:"#00aaff", borderColor:"#00aaff" }} onClick={()=>setScreen("pricing")}>SBLOCCA CON BETA →</button>
+              </div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
 
             {/* Sub tabs */}
             <div style={{ display:"flex", borderBottom:"1px solid #1a2332", gap:0 }}>
