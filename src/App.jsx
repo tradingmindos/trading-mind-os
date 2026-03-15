@@ -355,6 +355,9 @@ export default function TradingMindOS() {
   const [time, setTime] = useState(new Date());
   const [newTrade, setNewTrade] = useState({ date:new Date().toISOString().split("T")[0], symbol:"", direction:"LONG", entry:"", exit:"", size:"", emotionBefore:"🧠 Lucido", emotionDuring:"🧠 Lucido", emotionAfter:"🧠 Lucido", notes:"", setup:"" });
   const [reports, setReports] = useState([]);
+  const [psychTab, setPsychTab] = useState("overview");
+  const [preSession, setPreSession] = useState({ emotion:"", sleep:5, focus:5, confidence:5, ready:"", notes:"" });
+  const [postSession, setPostSession] = useState({ respected_plan:"", emotional_pnl:5, errors:[], improve:"", notes:"" });
   const [selectedReport, setSelectedReport] = useState(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [newReport, setNewReport] = useState({ title:"", week:"", content:"", min_plan:"mid" });
@@ -670,62 +673,313 @@ export default function TradingMindOS() {
         {activeTab==="psychology" && (
           <div style={{ display:"flex", flexDirection:"column", gap:20 }} className="fade-in">
             <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>ANALISI PSICOLOGICA</h2>
-            <div className="grid-2">
-              <div className="card" style={{ padding:24 }}>
-                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:20 }}>◉ Win Rate per Stato Emotivo</div>
-                {PSYCH_DATA.map(p=>{
-                  const pct=Math.round((p.wins/(p.wins+p.losses))*100);
-                  return (
-                    <div key={p.emotion} style={{ marginBottom:18 }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
-                        <span style={{ fontSize:13 }}>{p.emotion}</span>
-                        <div style={{ display:"flex", gap:8, fontSize:11 }}>
-                          <span style={{ color:"#00ff88" }}>{p.wins}W</span><span style={{ color:"#ff4466" }}>{p.losses}L</span>
-                          <span style={{ color:pct>=60?"#00ff88":"#ff4466", fontWeight:600 }}>{pct}%</span>
+
+            {/* Sub tabs */}
+            <div style={{ display:"flex", borderBottom:"1px solid #1a2332", gap:0 }}>
+              {[
+                {id:"overview", label:"Overview"},
+                {id:"pre", label:"Pre-Sessione"},
+                {id:"post", label:"Post-Sessione"},
+                {id:"insights", label:"Insights"},
+              ].map(t => (
+                <button key={t.id} className={`tab-btn ${psychTab===t.id?"active":""}`} onClick={()=>setPsychTab(t.id)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* OVERVIEW */}
+            {psychTab==="overview" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="grid-2">
+                  <div className="card" style={{ padding:24 }}>
+                    <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:20 }}>◉ Win Rate per Stato Emotivo</div>
+                    {PSYCH_DATA.map(p=>{
+                      const pct=Math.round((p.wins/(p.wins+p.losses))*100);
+                      return (
+                        <div key={p.emotion} style={{ marginBottom:18 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                            <span style={{ fontSize:13 }}>{p.emotion}</span>
+                            <div style={{ display:"flex", gap:8, fontSize:11 }}>
+                              <span style={{ color:"#00ff88" }}>{p.wins}W</span><span style={{ color:"#ff4466" }}>{p.losses}L</span>
+                              <span style={{ color:pct>=60?"#00ff88":"#ff4466", fontWeight:600 }}>{pct}%</span>
+                            </div>
+                          </div>
+                          <div className="psych-bar"><div className="psych-bar-fill" style={{ width:`${pct}%`, background:pct>=60?"linear-gradient(90deg,#00ff88,#00cc66)":pct>=40?"linear-gradient(90deg,#ffaa00,#ff8800)":"linear-gradient(90deg,#ff4466,#cc3355)" }}/></div>
                         </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <div className="card" style={{ padding:24 }}>
+                      <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Insight Chiave</div>
+                      {[
+                        {icon:"🎯",title:"Zona Migliore",text:"Quando sei Lucido o In Zona, il tuo win rate supera l'88%.",color:"#00ff88"},
+                        {icon:"⚠️",title:"Zona Rischio",text:"Il FOMO ti costa: solo 14% di win rate. Evita di tradare.",color:"#ff4466"},
+                        {icon:"💡",title:"Pattern",text:"I tuoi migliori trade arrivano dopo una vittoria.",color:"#ffaa00"},
+                      ].map(ins=>(
+                        <div key={ins.title} style={{ marginBottom:14, paddingLeft:12, borderLeft:`2px solid ${ins.color}44` }}>
+                          <div style={{ fontSize:12, color:ins.color, fontWeight:600, marginBottom:4 }}>{ins.icon} {ins.title}</div>
+                          <div style={{ fontSize:11, color:"#8b949e", lineHeight:1.6 }}>{ins.text}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="card" style={{ padding:24 }}>
+                      <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◉ Check-in Oggi</div>
+                      <div style={{ display:"flex", gap:12 }}>
+                        <button className="btn-primary" style={{ flex:1, fontSize:10 }} onClick={()=>setPsychTab("pre")}>
+                          + PRE-SESSIONE
+                        </button>
+                        <button className="btn-primary" style={{ flex:1, fontSize:10, borderColor:"#ff9900", color:"#ff9900" }} onClick={()=>setPsychTab("post")}>
+                          + POST-SESSIONE
+                        </button>
                       </div>
-                      <div className="psych-bar"><div className="psych-bar-fill" style={{ width:`${pct}%`, background:pct>=60?"linear-gradient(90deg,#00ff88,#00cc66)":pct>=40?"linear-gradient(90deg,#ffaa00,#ff8800)":"linear-gradient(90deg,#ff4466,#cc3355)" }}/></div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                <div className="card" style={{ padding:24 }}>
-                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Insight Chiave</div>
-                  {[
-                    {icon:"🎯",title:"Zona Migliore",text:"Quando sei Lucido o In Zona, il tuo win rate supera l'88%.",color:"#00ff88"},
-                    {icon:"⚠️",title:"Zona Rischio",text:"Il FOMO ti costa: solo 14% di win rate. Evita di tradare.",color:"#ff4466"},
-                    {icon:"💡",title:"Pattern",text:"I tuoi migliori trade arrivano dopo una vittoria.",color:"#ffaa00"},
-                  ].map(ins=>(
-                    <div key={ins.title} style={{ marginBottom:14, paddingLeft:12, borderLeft:`2px solid ${ins.color}44` }}>
-                      <div style={{ fontSize:12, color:ins.color, fontWeight:600, marginBottom:4 }}>{ins.icon} {ins.title}</div>
-                      <div style={{ fontSize:11, color:"#8b949e", lineHeight:1.6 }}>{ins.text}</div>
-                    </div>
-                  ))}
-                </div>
-                {user?.plan==="free" ? (
-                  <div className="card" style={{ padding:24, borderColor:"#ff990022", position:"relative", overflow:"hidden" }}>
-                    <div style={{ filter:"blur(4px)", pointerEvents:"none", height:120, background:"#0f1923", borderRadius:2 }}/>
-                    <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
-                      <div style={{ fontSize:24 }}>🔒</div>
-                      <div style={{ fontSize:11, color:"#ff9900", letterSpacing:2, margin:"8px 0" }}>PIANO BETA+</div>
-                      <button className="btn-primary" style={{ fontSize:9, borderColor:"#ff9900", color:"#ff9900" }} onClick={()=>setScreen("pricing")}>SBLOCCA →</button>
                     </div>
                   </div>
-                ) : (
-                  <div className="card" style={{ padding:24 }}>
-                    <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◉ Riflessione Giornaliera</div>
-                    {["Cosa ha funzionato oggi?","Cosa non ha funzionato?","Cosa farò diversamente domani?"].map(q=>(
-                      <div key={q} style={{ marginBottom:12 }}>
-                        <label className="label">{q}</label>
-                        <textarea className="input" placeholder="Scrivi qui..." style={{ height:60, resize:"vertical" }}/>
+                </div>
+              </div>
+            )}
+
+            {/* PRE-SESSIONE */}
+            {psychTab==="pre" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="card" style={{ padding:28, borderColor:"#00ff8822" }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:4, color:"#00ff88", marginBottom:4 }}>CHECK-IN PRE-SESSIONE</div>
+                  <div style={{ fontSize:11, color:"#556068", marginBottom:24 }}>Valuta il tuo stato mentale prima di aprire qualsiasi posizione</div>
+
+                  {/* Stato Emotivo */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">Stato Emotivo Generale</label>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+                      {["😤 FOMO","😰 Ansioso","😴 Stanco","😬 Nervoso","🧠 Lucido","💪 Fiducioso","🎯 In Zona","⚡ Energico"].map(e=>(
+                        <button key={e} onClick={()=>setPreSession({...preSession, emotion:e})}
+                          style={{ padding:"6px 12px", borderRadius:2, border:`1px solid ${preSession.emotion===e?"#00ff88":"#1a2332"}`,
+                            background:preSession.emotion===e?"#00ff8822":"transparent", color:preSession.emotion===e?"#00ff88":"#556068",
+                            cursor:"pointer", fontSize:12, fontFamily:"inherit", transition:"all 0.2s" }}>
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slider metrics */}
+                  <div className="grid-2" style={{ marginBottom:24 }}>
+                    {[
+                      {key:"sleep", label:"Qualità del Sonno", emoji:"😴"},
+                      {key:"focus", label:"Focus e Concentrazione", emoji:"🎯"},
+                      {key:"confidence", label:"Fiducia nel Piano", emoji:"💪"},
+                    ].map(m=>(
+                      <div key={m.key} style={{ marginBottom:16 }}>
+                        <label className="label">{m.emoji} {m.label}</label>
+                        <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:8 }}>
+                          <input type="range" min="1" max="10" value={preSession[m.key]||5}
+                            onChange={e=>setPreSession({...preSession,[m.key]:+e.target.value})}
+                            style={{ flex:1, accentColor:"#00ff88" }}/>
+                          <span style={{ fontSize:18, fontFamily:"'Bebas Neue',sans-serif", color:"#00ff88", minWidth:24 }}>
+                            {preSession[m.key]||5}
+                          </span>
+                        </div>
+                        <div style={{ display:"flex", justifyContent:"space-between", fontSize:9, color:"#556068", marginTop:2 }}>
+                          <span>Pessimo</span><span>Ottimo</span>
+                        </div>
                       </div>
                     ))}
-                    <button className="btn-primary" style={{ marginTop:8 }}>SALVA</button>
+                  </div>
+
+                  {/* Pronto a tradare? */}
+                  <div style={{ marginBottom:20 }}>
+                    <label className="label">Sei pronto a tradare oggi?</label>
+                    <div style={{ display:"flex", gap:12, marginTop:8 }}>
+                      {["✅ Sì, sono pronto","⚠️ Con cautela","❌ No, meglio aspettare"].map(opt=>(
+                        <button key={opt} onClick={()=>setPreSession({...preSession, ready:opt})}
+                          style={{ flex:1, padding:"10px 8px", borderRadius:2, border:`1px solid ${preSession.ready===opt?"#00ff88":"#1a2332"}`,
+                            background:preSession.ready===opt?"#00ff8822":"transparent", color:preSession.ready===opt?"#00ff88":"#556068",
+                            cursor:"pointer", fontSize:10, fontFamily:"inherit", letterSpacing:1, transition:"all 0.2s" }}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Note */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">Note pre-sessione</label>
+                    <textarea className="input" placeholder="Come ti senti oggi? Ci sono eventi di mercato da tenere a mente? Qual è il tuo piano per la sessione?"
+                      value={preSession.notes||""} onChange={e=>setPreSession({...preSession,notes:e.target.value})}
+                      style={{ height:100, resize:"vertical", lineHeight:1.8 }}/>
+                  </div>
+
+                  <button className="btn-solid" style={{ width:"100%" }} onClick={async()=>{
+                    const { error } = await supabase.from("psych_sessions").insert([{
+                      user_id: user.id,
+                      type: "pre",
+                      date: new Date().toISOString().split("T")[0],
+                      emotion: preSession.emotion,
+                      sleep: preSession.sleep||5,
+                      focus: preSession.focus||5,
+                      confidence: preSession.confidence||5,
+                      ready: preSession.ready,
+                      notes: preSession.notes,
+                    }]);
+                    if (!error) {
+                      setPreSession({ emotion:"", sleep:5, focus:5, confidence:5, ready:"", notes:"" });
+                      alert("✅ Check-in pre-sessione salvato!");
+                    }
+                  }}>SALVA CHECK-IN →</button>
+                </div>
+              </div>
+            )}
+
+            {/* POST-SESSIONE */}
+            {psychTab==="post" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="card" style={{ padding:28, borderColor:"#ff990022" }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:4, color:"#ff9900", marginBottom:4 }}>CHECK-IN POST-SESSIONE</div>
+                  <div style={{ fontSize:11, color:"#556068", marginBottom:24 }}>Rifletti onestamente sulla tua sessione di trading</div>
+
+                  {/* Rispettato il piano? */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">Hai rispettato il tuo piano di trading?</label>
+                    <div style={{ display:"flex", gap:12, marginTop:8 }}>
+                      {["✅ Completamente","⚠️ Parzialmente","❌ No"].map(opt=>(
+                        <button key={opt} onClick={()=>setPostSession({...postSession, respected_plan:opt})}
+                          style={{ flex:1, padding:"10px 8px", borderRadius:2, border:`1px solid ${postSession.respected_plan===opt?"#ff9900":"#1a2332"}`,
+                            background:postSession.respected_plan===opt?"#ff990022":"transparent", color:postSession.respected_plan===opt?"#ff9900":"#556068",
+                            cursor:"pointer", fontSize:10, fontFamily:"inherit", letterSpacing:1, transition:"all 0.2s" }}>
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* P&L Emotivo */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">P&L Emotivo — Come ti sei sentito durante la sessione?</label>
+                    <div style={{ display:"flex", alignItems:"center", gap:12, marginTop:8 }}>
+                      <span style={{ fontSize:10, color:"#ff4466" }}>Molto male</span>
+                      <input type="range" min="1" max="10" value={postSession.emotional_pnl||5}
+                        onChange={e=>setPostSession({...postSession,emotional_pnl:+e.target.value})}
+                        style={{ flex:1, accentColor:"#ff9900" }}/>
+                      <span style={{ fontSize:10, color:"#00ff88" }}>Molto bene</span>
+                      <span style={{ fontSize:20, fontFamily:"'Bebas Neue',sans-serif", color:"#ff9900", minWidth:24 }}>
+                        {postSession.emotional_pnl||5}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Errori psicologici */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">Errori psicologici commessi</label>
+                    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:8 }}>
+                      {["FOMO","Revenge trading","Overtrading","Chiusura anticipata","Troppa size","Nessun errore","Altro"].map(err=>(
+                        <button key={err}
+                          onClick={()=>{
+                            const errs = postSession.errors||[];
+                            const updated = errs.includes(err) ? errs.filter(e=>e!==err) : [...errs,err];
+                            setPostSession({...postSession,errors:updated});
+                          }}
+                          style={{ padding:"6px 12px", borderRadius:2,
+                            border:`1px solid ${(postSession.errors||[]).includes(err)?"#ff4466":"#1a2332"}`,
+                            background:(postSession.errors||[]).includes(err)?"#ff446622":"transparent",
+                            color:(postSession.errors||[]).includes(err)?"#ff4466":"#556068",
+                            cursor:"pointer", fontSize:11, fontFamily:"inherit", transition:"all 0.2s" }}>
+                          {err}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cosa migliorare */}
+                  <div style={{ marginBottom:20 }}>
+                    <label className="label">Cosa migliorare nella prossima sessione</label>
+                    <textarea className="input" placeholder="Cosa avresti fatto diversamente? Qual è la lezione più importante di oggi?"
+                      value={postSession.improve||""} onChange={e=>setPostSession({...postSession,improve:e.target.value})}
+                      style={{ height:80, resize:"vertical", lineHeight:1.8 }}/>
+                  </div>
+
+                  {/* Note libere */}
+                  <div style={{ marginBottom:24 }}>
+                    <label className="label">Note libere</label>
+                    <textarea className="input" placeholder="Qualsiasi altra osservazione sulla tua sessione..."
+                      value={postSession.notes||""} onChange={e=>setPostSession({...postSession,notes:e.target.value})}
+                      style={{ height:80, resize:"vertical", lineHeight:1.8 }}/>
+                  </div>
+
+                  <button className="btn-solid" style={{ width:"100%", background:"#ff9900", borderColor:"#ff9900", color:"#060a0f" }}
+                    onClick={async()=>{
+                      const { error } = await supabase.from("psych_sessions").insert([{
+                        user_id: user.id,
+                        type: "post",
+                        date: new Date().toISOString().split("T")[0],
+                        respected_plan: postSession.respected_plan,
+                        emotional_pnl: postSession.emotional_pnl||5,
+                        errors: postSession.errors||[],
+                        improve: postSession.improve,
+                        notes: postSession.notes,
+                      }]);
+                      if (!error) {
+                        setPostSession({ respected_plan:"", emotional_pnl:5, errors:[], improve:"", notes:"" });
+                        alert("✅ Check-in post-sessione salvato!");
+                      }
+                    }}>SALVA POST-SESSIONE →</button>
+                </div>
+              </div>
+            )}
+
+            {/* INSIGHTS */}
+            {psychTab==="insights" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="grid-2">
+                  <div className="card" style={{ padding:24 }}>
+                    <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◉ Pattern Emotivi</div>
+                    {PSYCH_DATA.map(p=>{
+                      const pct=Math.round((p.wins/(p.wins+p.losses))*100);
+                      return (
+                        <div key={p.emotion} style={{ marginBottom:16 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+                            <span style={{ fontSize:13 }}>{p.emotion}</span>
+                            <span style={{ color:pct>=60?"#00ff88":pct>=40?"#ffaa00":"#ff4466", fontWeight:600 }}>{pct}%</span>
+                          </div>
+                          <div className="psych-bar"><div className="psych-bar-fill" style={{ width:`${pct}%`, background:pct>=60?"linear-gradient(90deg,#00ff88,#00cc66)":pct>=40?"linear-gradient(90deg,#ffaa00,#ff8800)":"linear-gradient(90deg,#ff4466,#cc3355)" }}/></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    {[
+                      {icon:"🎯", title:"Stato Ottimale", value:"Lucido + In Zona", sub:"Win rate 88%+", color:"#00ff88"},
+                      {icon:"⚠️", title:"Stato da Evitare", value:"FOMO + Ansioso", sub:"Win rate sotto 20%", color:"#ff4466"},
+                      {icon:"😴", title:"Sonno e Performance", value:"Correlazione alta", sub:"Con sonno <6h perdi il 34% in più", color:"#ffaa00"},
+                      {icon:"📈", title:"Streak Positiva", value:"3 vittorie di fila", sub:"Attenzione all'overconfidence", color:"#00aaff"},
+                    ].map(ins=>(
+                      <div key={ins.title} className="stat-card" style={{ padding:16 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                          <div>
+                            <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:4 }}>{ins.icon} {ins.title}</div>
+                            <div style={{ fontSize:16, color:ins.color, fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2 }}>{ins.value}</div>
+                            <div style={{ fontSize:10, color:"#556068", marginTop:2 }}>{ins.sub}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Riflessione giornaliera */}
+                {user?.plan!=="free" && (
+                  <div className="card" style={{ padding:24 }}>
+                    <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Riflessione Settimanale</div>
+                    {["Qual è stato il tuo stato mentale dominante questa settimana?","Quali errori psicologici hai ripetuto?","Cosa hai imparato su te stesso come trader?"].map(q=>(
+                      <div key={q} style={{ marginBottom:16 }}>
+                        <label className="label">{q}</label>
+                        <textarea className="input" placeholder="Scrivi qui..." style={{ height:70, resize:"vertical" }}/>
+                      </div>
+                    ))}
+                    <button className="btn-primary" style={{ marginTop:8 }}>SALVA RIFLESSIONE</button>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
         )}
 
