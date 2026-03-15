@@ -363,6 +363,7 @@ export default function TradingMindOS() {
   const [sessionNotes, setSessionNotes] = useState([]);
   const [quickNote, setQuickNote] = useState("");
   const [checklist, setChecklist] = useState([false,false,false,false,false,false]);
+  const [psychSessions, setPsychSessions] = useState([]);
 
   useEffect(() => {
     if (!sessionActive) return;
@@ -411,10 +412,16 @@ export default function TradingMindOS() {
     if (data) setReports(data);
   };
 
+  const loadPsychSessions = async (userId) => {
+    const { data } = await supabase.from("psych_sessions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);
+    if (data) setPsychSessions(data);
+  };
+
   const handleLogin = (userData) => {
     setUser(userData);
     loadTrades(userData.id);
     loadReports();
+    loadPsychSessions(userData.id);
     setScreen("app");
   };
 
@@ -885,6 +892,7 @@ export default function TradingMindOS() {
                             notes: sessionNotes.map(n=>n.text).join(" | "),
                           }]);
                           alert(`✅ Sessione salvata!\nDurata: ${h}:${m}:${s}\nNote: ${sessionNotes.length}\nChecklist: ${checklist.filter(Boolean).length}/6`);
+                          loadPsychSessions(user.id);
                         }
                         setSessionTimer(0);
                         setSessionNotes([]);
@@ -1148,8 +1156,55 @@ export default function TradingMindOS() {
                   </div>
                 </div>
 
-                {/* Riflessione giornaliera */}
-                {user?.plan!=="free" && (
+                {/* Storico Sessioni */}
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ STORICO SESSIONI</div>
+                  {psychSessions.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:24, color:"#556068", fontSize:12 }}>
+                      Nessuna sessione salvata ancora — avvia la tua prima sessione nel tab "Sessione Live"
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {psychSessions.map(s=>(
+                        <div key={s.id} className="card" style={{ padding:16, background:"#060a0f" }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+                            <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                              <span style={{ fontSize:9, color: s.type==="pre"?"#00ff88":s.type==="post"?"#ff9900":"#00aaff",
+                                border:"1px solid", padding:"2px 8px", letterSpacing:1, textTransform:"uppercase" }}>
+                                {s.type==="pre"?"PRE":s.type==="post"?"POST":"SESSIONE"}
+                              </span>
+                              <span style={{ fontSize:11, color:"#8b949e" }}>{s.date}</span>
+                              {s.emotion && <span style={{ fontSize:12 }}>{s.emotion}</span>}
+                            </div>
+                            <div style={{ display:"flex", gap:16, fontSize:10, color:"#556068" }}>
+                              {s.duration && <span>⏱ {String(Math.floor(s.duration/3600)).padStart(2,"0")}:{String(Math.floor((s.duration%3600)/60)).padStart(2,"0")}:{String(s.duration%60).padStart(2,"0")}</span>}
+                              {s.checklist_completed !== null && <span>{s.checklist_completed?"✅ Checklist OK":"⚠️ Checklist incompleta"}</span>}
+                            </div>
+                          </div>
+                          {s.type==="pre" && (
+                            <div style={{ display:"flex", gap:16, fontSize:11, color:"#556068" }}>
+                              {s.sleep && <span>😴 Sonno: <span style={{ color:"#c9d1d9" }}>{s.sleep}/10</span></span>}
+                              {s.focus && <span>🎯 Focus: <span style={{ color:"#c9d1d9" }}>{s.focus}/10</span></span>}
+                              {s.confidence && <span>💪 Fiducia: <span style={{ color:"#c9d1d9" }}>{s.confidence}/10</span></span>}
+                              {s.ready && <span>{s.ready}</span>}
+                            </div>
+                          )}
+                          {s.type==="post" && (
+                            <div style={{ display:"flex", gap:16, fontSize:11, color:"#556068", flexWrap:"wrap" }}>
+                              {s.respected_plan && <span>Piano: <span style={{ color:"#c9d1d9" }}>{s.respected_plan}</span></span>}
+                              {s.emotional_pnl && <span>P&L emotivo: <span style={{ color:"#c9d1d9" }}>{s.emotional_pnl}/10</span></span>}
+                              {s.errors && s.errors.length>0 && <span>Errori: <span style={{ color:"#ff4466" }}>{s.errors.join(", ")}</span></span>}
+                            </div>
+                          )}
+                          {s.notes && <div style={{ fontSize:11, color:"#556068", marginTop:8, fontStyle:"italic" }}>"{s.notes}"</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Riflessione settimanale */}
+                {plan.name !== "FREE" && (
                   <div className="card" style={{ padding:24 }}>
                     <div style={{ fontSize:9, color:"#556068", letterSpacing:2, textTransform:"uppercase", marginBottom:16 }}>◈ Riflessione Settimanale</div>
                     {["Qual è stato il tuo stato mentale dominante questa settimana?","Quali errori psicologici hai ripetuto?","Cosa hai imparato su te stesso come trader?"].map(q=>(
