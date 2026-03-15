@@ -868,7 +868,29 @@ export default function TradingMindOS() {
                       {sessionActive ? "⏸ PAUSA SESSIONE" : "▶ AVVIA SESSIONE"}
                     </button>
                     <button className="btn-primary" style={{ borderColor:"#556068", color:"#556068" }}
-                      onClick={()=>{ setSessionActive(false); setSessionTimer(0); setSessionNotes([]); }}>
+                      onClick={async()=>{
+                        setSessionActive(false);
+                        if (sessionTimer > 0) {
+                          const h = String(Math.floor(sessionTimer/3600)).padStart(2,"0");
+                          const m = String(Math.floor((sessionTimer%3600)/60)).padStart(2,"0");
+                          const s = String(sessionTimer%60).padStart(2,"0");
+                          await supabase.from("psych_sessions").insert([{
+                            user_id: user.id,
+                            type: "session",
+                            date: new Date().toISOString().split("T")[0],
+                            emotion: sessionEmotion,
+                            duration: sessionTimer,
+                            session_notes: sessionNotes,
+                            checklist_completed: checklist.every(Boolean),
+                            notes: sessionNotes.map(n=>n.text).join(" | "),
+                          }]);
+                          alert(`✅ Sessione salvata!\nDurata: ${h}:${m}:${s}\nNote: ${sessionNotes.length}\nChecklist: ${checklist.filter(Boolean).length}/6`);
+                        }
+                        setSessionTimer(0);
+                        setSessionNotes([]);
+                        setChecklist([false,false,false,false,false,false]);
+                        setSessionEmotion("");
+                      }}>
                       ⏹ TERMINA
                     </button>
                   </div>
