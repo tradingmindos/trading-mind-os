@@ -364,6 +364,14 @@ export default function TradingMindOS() {
   const [quickNote, setQuickNote] = useState("");
   const [checklist, setChecklist] = useState([false,false,false,false,false,false]);
   const [psychSessions, setPsychSessions] = useState([]);
+  const [rules, setRules] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [newRule, setNewRule] = useState("");
+  const [editingRule, setEditingRule] = useState(null);
+  const [newGoal, setNewGoal] = useState({ title:"", target:"", type:"pnl", period:"monthly" });
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [goalsLoaded, setGoalsLoaded] = useState(false);
+  const [goalsTab, setGoalsTab] = useState("rules");
 
   useEffect(() => {
     if (!sessionActive) return;
@@ -417,11 +425,20 @@ export default function TradingMindOS() {
     if (data) setPsychSessions(data);
   };
 
+  const loadRulesAndGoals = async (userId) => {
+    const { data: rulesData } = await supabase.from("trading_rules").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+    if (rulesData) setRules(rulesData);
+    const { data: goalsData } = await supabase.from("trading_goals").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+    if (goalsData) setGoals(goalsData);
+    setGoalsLoaded(true);
+  };
+
   const handleLogin = (userData) => {
     setUser(userData);
     loadTrades(userData.id);
     loadReports();
     loadPsychSessions(userData.id);
+    loadRulesAndGoals(userData.id);
     setScreen("app");
   };
 
@@ -504,6 +521,7 @@ export default function TradingMindOS() {
     {id:"stats",label:"Statistiche",icon:"◫"},
     {id:"reports",label:"Report",icon:"◐"},
     {id:"markets",label:"Mercati",icon:"◬"},
+    {id:"goals",label:"Obiettivi",icon:"◎"},
   ];
 
   return (
@@ -1447,6 +1465,297 @@ export default function TradingMindOS() {
                 title="economic calendar"
               />
             </div>
+
+          </div>
+        )}
+
+        {/* GOALS */}
+        {activeTab==="goals" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:20 }} className="fade-in">
+            <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>OBIETTIVI E REGOLE</h2>
+
+            {/* Sub tabs */}
+            <div style={{ display:"flex", borderBottom:"1px solid #1a2332", gap:0 }}>
+              {[
+                {id:"rules", label:"Le Mie Regole"},
+                {id:"monthly", label:"Obiettivi Mensili"},
+                {id:"risk", label:"Risk Management"},
+              ].map(t => (
+                <button key={t.id} className={`tab-btn ${goalsTab===t.id?"active":""}`} onClick={()=>setGoalsTab(t.id)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* REGOLE */}
+            {goalsTab==="rules" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◎ LE MIE REGOLE DI TRADING</div>
+                  <div style={{ fontSize:11, color:"#556068", marginBottom:20, lineHeight:1.8 }}>
+                    Scrivi le tue regole personali. Le rivedrai prima di ogni sessione.
+                  </div>
+
+                  {/* Add new rule */}
+                  <div style={{ display:"flex", gap:12, marginBottom:20 }}>
+                    <input className="input" placeholder="Es: Non operare mai il lunedì, Max 2 trade al giorno..."
+                      value={newRule} onChange={e=>setNewRule(e.target.value)}
+                      onKeyDown={e=>{ if(e.key==="Enter" && newRule.trim()) {
+                        supabase.from("trading_rules").insert([{ user_id:user.id, text:newRule, active:true }])
+                          .select().then(({data})=>{ if(data) { setRules([...rules, data[0]]); setNewRule(""); }});
+                      }}}
+                      style={{ flex:1 }}/>
+                    <button className="btn-primary" onClick={async()=>{
+                      if(!newRule.trim()) return;
+                      const {data} = await supabase.from("trading_rules").insert([{ user_id:user.id, text:newRule, active:true }]).select();
+                      if(data) { setRules([...rules, data[0]]); setNewRule(""); }
+                    }}>+ AGGIUNGI</button>
+                  </div>
+
+                  {/* Rules list */}
+                  {rules.length === 0 ? (
+                    <div style={{ textAlign:"center", padding:32, color:"#556068", fontSize:12 }}>
+                      Nessuna regola ancora — inizia ad aggiungere le tue regole personali
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      {rules.map((rule,i)=>(
+                        <div key={rule.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 16px",
+                          background:"#060a0f", borderRadius:2, border:`1px solid ${rule.active?"#00ff8822":"#1a2332"}`,
+                          transition:"all 0.2s" }}>
+                          {/* Toggle active */}
+                          <div onClick={async()=>{
+                            const {data} = await supabase.from("trading_rules").update({active:!rule.active}).eq("id",rule.id).select();
+                            if(data) setRules(rules.map(r=>r.id===rule.id?data[0]:r));
+                          }} style={{ width:20, height:20, borderRadius:2, border:`1px solid ${rule.active?"#00ff88":"#556068"}`,
+                            background:rule.active?"#00ff88":"transparent", display:"flex", alignItems:"center",
+                            justifyContent:"center", cursor:"pointer", flexShrink:0, fontSize:12, color:"#060a0f" }}>
+                            {rule.active?"✓":""}
+                          </div>
+
+                          {/* Rule text - editable */}
+                          {editingRule===rule.id ? (
+                            <input className="input" style={{ flex:1 }} defaultValue={rule.text}
+                              onBlur={async(e)=>{
+                                const {data} = await supabase.from("trading_rules").update({text:e.target.value}).eq("id",rule.id).select();
+                                if(data) setRules(rules.map(r=>r.id===rule.id?data[0]:r));
+                                setEditingRule(null);
+                              }}
+                              onKeyDown={async(e)=>{ if(e.key==="Enter") e.target.blur(); }}
+                              autoFocus/>
+                          ) : (
+                            <span style={{ flex:1, fontSize:12, color:rule.active?"#c9d1d9":"#556068",
+                              textDecoration:rule.active?"none":"line-through" }}>
+                              {i+1}. {rule.text}
+                            </span>
+                          )}
+
+                          {/* Actions */}
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button onClick={()=>setEditingRule(rule.id)} style={{ background:"none", border:"none",
+                              color:"#556068", cursor:"pointer", fontSize:12, padding:"2px 6px" }}>✏️</button>
+                            <button onClick={async()=>{
+                              await supabase.from("trading_rules").delete().eq("id",rule.id);
+                              setRules(rules.filter(r=>r.id!==rule.id));
+                            }} style={{ background:"none", border:"none", color:"#ff4466", cursor:"pointer", fontSize:12, padding:"2px 6px" }}>🗑</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {rules.length > 0 && (
+                    <div style={{ marginTop:16, padding:"10px 16px", background:"#060a0f", borderRadius:2, borderLeft:"2px solid #00ff8844" }}>
+                      <span style={{ fontSize:11, color:"#556068" }}>
+                        {rules.filter(r=>r.active).length}/{rules.length} regole attive
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Regole consigliate */}
+                <div className="card" style={{ padding:24, borderColor:"#00aaff22" }}>
+                  <div style={{ fontSize:9, color:"#00aaff", letterSpacing:2, marginBottom:16 }}>💡 REGOLE CONSIGLIATE — clicca per aggiungere</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                    {[
+                      "Non operare mai in perdita > 2% del conto",
+                      "Max 3 trade al giorno",
+                      "Stop loss obbligatorio prima di entrare",
+                      "Non tradare nelle prime 30 minuti di apertura",
+                      "Non fare revenge trading",
+                      "Chiudi tutto venerdì pomeriggio",
+                      "Non operare durante news ad alto impatto",
+                      "Rispetta sempre il risk/reward minimo 1:2",
+                      "Non aumentare la size dopo una perdita",
+                      "Fai una pausa dopo 3 perdite consecutive",
+                    ].map(r=>(
+                      <button key={r} onClick={async()=>{
+                        if(rules.find(rule=>rule.text===r)) return;
+                        const {data} = await supabase.from("trading_rules").insert([{ user_id:user.id, text:r, active:true }]).select();
+                        if(data) setRules([...rules, data[0]]);
+                      }} style={{ padding:"6px 12px", borderRadius:2, border:"1px solid #1a2332",
+                        background: rules.find(rule=>rule.text===r)?"#00aaff22":"transparent",
+                        color: rules.find(rule=>rule.text===r)?"#00aaff":"#556068",
+                        cursor:"pointer", fontSize:11, fontFamily:"inherit", transition:"all 0.2s" }}>
+                        {rules.find(rule=>rule.text===r)?"✓ ":""}{r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* OBIETTIVI MENSILI */}
+            {goalsTab==="monthly" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+                {/* Add goal */}
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:16 }}>◎ NUOVO OBIETTIVO</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <div className="grid-2">
+                      <div>
+                        <label className="label">Titolo obiettivo</label>
+                        <input className="input" placeholder="Es: Win rate mensile" value={newGoal.title}
+                          onChange={e=>setNewGoal({...newGoal,title:e.target.value})}/>
+                      </div>
+                      <div>
+                        <label className="label">Target</label>
+                        <input className="input" placeholder="Es: 60%, 500$, 20 trade..."
+                          value={newGoal.target} onChange={e=>setNewGoal({...newGoal,target:e.target.value})}/>
+                      </div>
+                    </div>
+                    <div className="grid-2">
+                      <div>
+                        <label className="label">Tipo</label>
+                        <select className="select" style={{ width:"100%" }} value={newGoal.type}
+                          onChange={e=>setNewGoal({...newGoal,type:e.target.value})}>
+                          <option value="pnl">P&L Target</option>
+                          <option value="winrate">Win Rate</option>
+                          <option value="trades">Numero Trade</option>
+                          <option value="psychology">Obiettivo Psicologico</option>
+                          <option value="custom">Personalizzato</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label">Periodo</label>
+                        <select className="select" style={{ width:"100%" }} value={newGoal.period}
+                          onChange={e=>setNewGoal({...newGoal,period:e.target.value})}>
+                          <option value="weekly">Settimanale</option>
+                          <option value="monthly">Mensile</option>
+                          <option value="quarterly">Trimestrale</option>
+                        </select>
+                      </div>
+                    </div>
+                    <button className="btn-primary" disabled={!newGoal.title||!newGoal.target}
+                      onClick={async()=>{
+                        const {data} = await supabase.from("trading_goals").insert([{
+                          user_id:user.id, ...newGoal, status:"active", created_at:new Date().toISOString()
+                        }]).select();
+                        if(data) { setGoals([data[0],...goals]); setNewGoal({title:"",target:"",type:"pnl",period:"monthly"}); }
+                      }}>+ AGGIUNGI OBIETTIVO</button>
+                  </div>
+                </div>
+
+                {/* Goals list */}
+                {goals.length === 0 ? (
+                  <div className="card" style={{ padding:40, textAlign:"center" }}>
+                    <div style={{ fontSize:32, marginBottom:12 }}>🎯</div>
+                    <div style={{ fontSize:14, color:"#556068" }}>Nessun obiettivo ancora.</div>
+                    <div style={{ fontSize:11, color:"#2a3444", marginTop:8 }}>Aggiungi il tuo primo obiettivo qui sopra.</div>
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    {goals.map(goal=>(
+                      <div key={goal.id} className="card" style={{ padding:20,
+                        borderColor:goal.status==="completed"?"#00ff8844":goal.status==="failed"?"#ff446622":"#1a2332" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                          <div>
+                            <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
+                              <span style={{ fontSize:9, color:"#556068", letterSpacing:2, border:"1px solid #1a2332", padding:"2px 8px" }}>
+                                {goal.period==="weekly"?"SETTIMANALE":goal.period==="monthly"?"MENSILE":"TRIMESTRALE"}
+                              </span>
+                              <span style={{ fontSize:9, color:"#00aaff", letterSpacing:1 }}>
+                                {goal.type==="pnl"?"P&L":goal.type==="winrate"?"WIN RATE":goal.type==="trades"?"TRADE":goal.type==="psychology"?"PSICOLOGIA":"CUSTOM"}
+                              </span>
+                            </div>
+                            <div style={{ fontSize:16, color:"#c9d1d9", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2 }}>
+                              {goal.title}
+                            </div>
+                            <div style={{ fontSize:13, color:"#00ff88", marginTop:4 }}>Target: {goal.target}</div>
+                          </div>
+                          <div style={{ display:"flex", gap:8 }}>
+                            <button onClick={async()=>{
+                              const newStatus = goal.status==="completed"?"active":"completed";
+                              const {data} = await supabase.from("trading_goals").update({status:newStatus}).eq("id",goal.id).select();
+                              if(data) setGoals(goals.map(g=>g.id===goal.id?data[0]:g));
+                            }} style={{ background:goal.status==="completed"?"#00ff8822":"transparent",
+                              border:`1px solid ${goal.status==="completed"?"#00ff88":"#1a2332"}`,
+                              color:goal.status==="completed"?"#00ff88":"#556068",
+                              cursor:"pointer", fontSize:10, padding:"4px 10px", fontFamily:"inherit", borderRadius:2 }}>
+                              {goal.status==="completed"?"✓ COMPLETATO":"COMPLETA"}
+                            </button>
+                            <button onClick={async()=>{
+                              await supabase.from("trading_goals").delete().eq("id",goal.id);
+                              setGoals(goals.filter(g=>g.id!==goal.id));
+                            }} style={{ background:"none", border:"none", color:"#ff4466", cursor:"pointer", fontSize:14 }}>🗑</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* RISK MANAGEMENT */}
+            {goalsTab==="risk" && (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div className="card" style={{ padding:24 }}>
+                  <div style={{ fontSize:9, color:"#ff4466", letterSpacing:2, marginBottom:20 }}>⚠ PARAMETRI RISK MANAGEMENT</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                    {[
+                      {key:"max_risk_per_trade", label:"Rischio massimo per trade", placeholder:"Es: 1%", icon:"📊"},
+                      {key:"max_daily_loss", label:"Perdita massima giornaliera", placeholder:"Es: 3% o 150$", icon:"📉"},
+                      {key:"max_trades_per_day", label:"Trade massimi al giorno", placeholder:"Es: 3", icon:"🔢"},
+                      {key:"min_rr", label:"Risk/Reward minimo", placeholder:"Es: 1:2", icon:"⚖️"},
+                      {key:"max_correlated", label:"Posizioni correlate max", placeholder:"Es: 2", icon:"🔗"},
+                    ].map(param=>(
+                      <div key={param.key}>
+                        <label className="label">{param.icon} {param.label}</label>
+                        <input className="input" placeholder={param.placeholder}
+                          defaultValue={user?.[param.key]||""}
+                          onBlur={async(e)=>{
+                            await supabase.from("risk_settings").upsert([{
+                              user_id:user.id, [param.key]:e.target.value, updated_at:new Date().toISOString()
+                            }], {onConflict:"user_id"});
+                          }}/>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="btn-solid" style={{ marginTop:24, width:"100%" }}
+                    onClick={()=>alert("✅ Parametri risk management salvati!")}>
+                    SALVA PARAMETRI
+                  </button>
+                </div>
+
+                <div className="card" style={{ padding:24, borderColor:"#ff440022" }}>
+                  <div style={{ fontSize:9, color:"#ff4466", letterSpacing:2, marginBottom:16 }}>🛑 REGOLE DI PROTEZIONE</div>
+                  {[
+                    {icon:"🛑", text:"Se raggiungi la perdita massima giornaliera — SMETTI di tradare.", color:"#ff4466"},
+                    {icon:"⏰", text:"Dopo 3 perdite consecutive — pausa obbligatoria di almeno 1 ora.", color:"#ffaa00"},
+                    {icon:"💡", text:"Se il tuo P&L emotivo è sotto 5 — considera di non aprire nuove posizioni.", color:"#00aaff"},
+                    {icon:"📊", text:"Rivedi le tue regole ogni domenica sera prima della nuova settimana.", color:"#00ff88"},
+                  ].map((r,i)=>(
+                    <div key={i} style={{ display:"flex", gap:12, padding:"12px 16px", background:"#060a0f",
+                      borderRadius:2, marginBottom:8, borderLeft:`2px solid ${r.color}44` }}>
+                      <span style={{ fontSize:18 }}>{r.icon}</span>
+                      <span style={{ fontSize:11, color:"#8b949e", lineHeight:1.6 }}>{r.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
         )}
