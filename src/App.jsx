@@ -481,6 +481,7 @@ export default function TradingMindOS() {
     {id:"psychology",label:"Psicologia",icon:"◉"},
     {id:"stats",label:"Statistiche",icon:"◫"},
     {id:"reports",label:"Report",icon:"◐"},
+    {id:"markets",label:"Mercati",icon:"◬"},
   ];
 
   return (
@@ -852,6 +853,109 @@ export default function TradingMindOS() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* MARKETS */}
+        {activeTab==="markets" && (
+          <div style={{ display:"flex", flexDirection:"column", gap:20 }} className="fade-in">
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4 }}>MERCATI LIVE</h2>
+                <p style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>QUOTAZIONI IN TEMPO REALE</p>
+              </div>
+              <div style={{ fontSize:10, color:"#556068", letterSpacing:1 }}>
+                <span style={{ color:"#00ff88" }}>●</span> LIVE — Powered by TradingView
+              </div>
+            </div>
+
+            {/* Ticker Tape */}
+            <div className="card" style={{ padding:0, overflow:"hidden", borderRadius:4 }}>
+              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, padding:"12px 16px 0" }}>◬ TICKER LIVE</div>
+              <div className="tradingview-widget-container" style={{ height:46 }}>
+                <iframe
+                  src="https://s.tradingview.com/embed-widget/ticker-tape/?locale=it#%7B%22symbols%22%3A%5B%7B%22proName%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22title%22%3A%22S%26P%20500%22%7D%2C%7B%22proName%22%3A%22FOREXCOM%3ANSQUSD%22%2C%22title%22%3A%22Nasdaq%22%7D%2C%7B%22description%22%3A%22EUR%2FUSD%22%2C%22proName%22%3A%22FX%3AEURUSD%22%7D%2C%7B%22description%22%3A%22GBP%2FUSD%22%2C%22proName%22%3A%22FX%3AGBPUSD%22%7D%2C%7B%22description%22%3A%22Gold%22%2C%22proName%22%3A%22TVC%3AGOLD%22%7D%2C%7B%22description%22%3A%22Bitcoin%22%2C%22proName%22%3A%22BITSTAMP%3ABTCUSD%22%7D%2C%7B%22description%22%3A%22Ethereum%22%2C%22proName%22%3A%22BITSTAMP%3AETHUSD%22%7D%2C%7B%22description%22%3A%22Oil%22%2C%22proName%22%3A%22TVC%3AUSOIL%22%7D%5D%2C%22showSymbolLogo%22%3Atrue%2C%22isTransparent%22%3Atrue%2C%22displayMode%22%3A%22adaptive%22%2C%22colorTheme%22%3A%22dark%22%2C%22utm_source%22%3A%22trading-mind-os.vercel.app%22%2C%22utm_medium%22%3A%22widget%22%7D"
+                  style={{ width:"100%", height:46, border:"none" }}
+                  title="ticker tape"
+                />
+              </div>
+            </div>
+
+            {/* Main Chart */}
+            <div className="card" style={{ padding:16 }}>
+              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ GRAFICO AVANZATO</div>
+              <iframe
+                src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=it#%7B%22autosize%22%3Atrue%2C%22symbol%22%3A%22TVC%3AGOLD%22%2C%22interval%22%3A%22D%22%2C%22timezone%22%3A%22Europe%2FRome%22%2C%22theme%22%3A%22dark%22%2C%22style%22%3A%221%22%2C%22locale%22%3A%22it%22%2C%22backgroundColor%22%3A%22rgba(6%2C10%2C15%2C1)%22%2C%22gridColor%22%3A%22rgba(26%2C35%2C50%2C1)%22%2C%22allow_symbol_change%22%3Atrue%2C%22calendar%22%3Afalse%2C%22hide_volume%22%3Afalse%2C%22support_host%22%3A%22https%3A%2F%2Fwww.tradingview.com%22%7D"
+                style={{ width:"100%", height:500, border:"none", borderRadius:2 }}
+                title="advanced chart"
+                allowFullScreen
+              />
+            </div>
+
+            {/* Market Overview Grid */}
+            <div className="grid-2" style={{ gap:16 }}>
+
+              {/* Forex */}
+              <div className="card" style={{ padding:16 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ FOREX</div>
+                <iframe
+                  src="https://s.tradingview.com/embed-widget/market-quotes/?locale=it#%7B%22title%22%3A%22Forex%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22FX%3AEURUSD%22%2C%22displayName%22%3A%22EUR%2FUSD%22%7D%2C%7B%22name%22%3A%22FX%3AGBPUSD%22%2C%22displayName%22%3A%22GBP%2FUSD%22%7D%2C%7B%22name%22%3A%22FX%3AUSDJPY%22%2C%22displayName%22%3A%22USD%2FJPY%22%7D%2C%7B%22name%22%3A%22FX%3AUSDCHF%22%2C%22displayName%22%3A%22USD%2FCHF%22%7D%2C%7B%22name%22%3A%22FX%3AAUDUSD%22%2C%22displayName%22%3A%22AUD%2FUSD%22%7D%5D%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22locale%22%3A%22it%22%7D"
+                  style={{ width:"100%", height:220, border:"none" }}
+                  title="forex"
+                />
+              </div>
+
+              {/* Commodities */}
+              <div className="card" style={{ padding:16 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ MATERIE PRIME</div>
+                <iframe
+                  src="https://s.tradingview.com/embed-widget/market-quotes/?locale=it#%7B%22title%22%3A%22Commodities%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22TVC%3AGOLD%22%2C%22displayName%22%3A%22Gold%22%7D%2C%7B%22name%22%3A%22TVC%3ASILVER%22%2C%22displayName%22%3A%22Silver%22%7D%2C%7B%22name%22%3A%22TVC%3AUSOIL%22%2C%22displayName%22%3A%22WTI%20Oil%22%7D%2C%7B%22name%22%3A%22TVC%3ANATURAL_GAS%22%2C%22displayName%22%3A%22Natural%20Gas%22%7D%5D%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22locale%22%3A%22it%22%7D"
+                  style={{ width:"100%", height:220, border:"none" }}
+                  title="commodities"
+                />
+              </div>
+
+              {/* Indices */}
+              <div className="card" style={{ padding:16 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ INDICI</div>
+                <iframe
+                  src="https://s.tradingview.com/embed-widget/market-quotes/?locale=it#%7B%22title%22%3A%22Indices%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22FOREXCOM%3ASPXUSD%22%2C%22displayName%22%3A%22S%26P%20500%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ANSQUSD%22%2C%22displayName%22%3A%22Nasdaq%22%7D%2C%7B%22name%22%3A%22FOREXCOM%3ADOWUSD%22%2C%22displayName%22%3A%22Dow%20Jones%22%7D%2C%7B%22name%22%3A%22TVC%3ADAX%22%2C%22displayName%22%3A%22DAX%22%7D%2C%7B%22name%22%3A%22TVC%3AFTSE%22%2C%22displayName%22%3A%22FTSE%22%7D%5D%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22locale%22%3A%22it%22%7D"
+                  style={{ width:"100%", height:220, border:"none" }}
+                  title="indices"
+                />
+              </div>
+
+              {/* Crypto */}
+              <div className="card" style={{ padding:16 }}>
+                <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ CRYPTO</div>
+                <iframe
+                  src="https://s.tradingview.com/embed-widget/market-quotes/?locale=it#%7B%22title%22%3A%22Crypto%22%2C%22symbols%22%3A%5B%7B%22name%22%3A%22BITSTAMP%3ABTCUSD%22%2C%22displayName%22%3A%22Bitcoin%22%7D%2C%7B%22name%22%3A%22BITSTAMP%3AETHUSD%22%2C%22displayName%22%3A%22Ethereum%22%7D%2C%7B%22name%22%3A%22COINBASE%3ASOLUSDT%22%2C%22displayName%22%3A%22Solana%22%7D%2C%7B%22name%22%3A%22BINANCE%3ABNBUSDT%22%2C%22displayName%22%3A%22BNB%22%7D%5D%2C%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22locale%22%3A%22it%22%7D"
+                  style={{ width:"100%", height:220, border:"none" }}
+                  title="crypto"
+                />
+              </div>
+            </div>
+
+            {/* Sentiment */}
+            <div className="card" style={{ padding:16 }}>
+              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ SENTIMENT — LONG/SHORT RATIO</div>
+              <iframe
+                src="https://s.tradingview.com/embed-widget/technical-analysis/?locale=it#%7B%22interval%22%3A%221D%22%2C%22width%22%3A%22100%25%22%2C%22isTransparent%22%3Atrue%2C%22height%22%3A%22200%22%2C%22symbol%22%3A%22TVC%3AGOLD%22%2C%22showIntervalTabs%22%3Atrue%2C%22displayMode%22%3A%22multiple%22%2C%22locale%22%3A%22it%22%2C%22colorTheme%22%3A%22dark%22%7D"
+                style={{ width:"100%", height:200, border:"none" }}
+                title="sentiment"
+              />
+            </div>
+
+            {/* Economic Calendar */}
+            <div className="card" style={{ padding:16 }}>
+              <div style={{ fontSize:9, color:"#556068", letterSpacing:2, marginBottom:12 }}>◬ CALENDARIO ECONOMICO</div>
+              <iframe
+                src="https://s.tradingview.com/embed-widget/events/?locale=it#%7B%22colorTheme%22%3A%22dark%22%2C%22isTransparent%22%3Atrue%2C%22width%22%3A%22100%25%22%2C%22height%22%3A%22400%22%2C%22importanceFilter%22%3A%220%2C1%22%2C%22currencyFilter%22%3A%22USD%2CEUR%2CGBP%2CJPY%2CAUD%2CCAD%2CCHF%22%7D"
+                style={{ width:"100%", height:400, border:"none" }}
+                title="economic calendar"
+              />
+            </div>
+
           </div>
         )}
       </main>
